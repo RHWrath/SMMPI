@@ -1,0 +1,40 @@
+﻿{
+  "platforms": [
+    {
+      "name": "Snapchat",
+      "package_name": "com.snapchat.android",
+      "remote_folder": "/storage/emulated/0/Android/data/com.snapchat.android/files/Camera1/",
+      "photo": {
+        "width": 1080,
+        "height": 1920,
+        "rotate": -90,
+        "mirror": true
+      },
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "rotate": -90,
+        "mirror": true,
+        "max_duration": 60
+      }
+    },
+    {
+      "name": "WhatsApp",
+      "package_name": "com.whatsapp",
+      "remote_folder": "/storage/emulated/0/Android/data/com.whatsapp/files/Camera1/",
+      "photo": {
+        "width": 3840,
+        "height": 2160,
+        "rotate": null,
+        "mirror": null
+      },
+      "video": {
+        "width": 3840,
+        "height": 2160,
+        "rotate": null,
+        "mirror": null,
+        "max_duration": 60
+      }
+    }
+  ]
+}

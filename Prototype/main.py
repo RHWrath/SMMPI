@@ -11,6 +11,7 @@ from device_manager import DeviceManager
 from stream_wrapper import ScrcpyCanvasWrapper
 from image_to_video import on_image_confirm
 from video import on_video_confirm
+from platform_management import get_active_platform, is_known_platform
 
 
 class MediaDisplayApp:
@@ -34,7 +35,7 @@ class MediaDisplayApp:
         self.ffmpeg_process = None
         self.adb_process = None
         self.stream = None
-        self.remote_folder = "/storage/emulated/0/Android/data/com.snapchat.android/files/Camera1/"
+        self.active_platform = None  # set on confirm via ADB detection
 
         self.setup_ui()
         self.app.withdraw()
@@ -52,6 +53,7 @@ class MediaDisplayApp:
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
         self.add_device_status()
+        self.add_platform_status()
 
     def start_stream(self):
         if not self.selected_device:
@@ -66,7 +68,7 @@ class MediaDisplayApp:
         try:
             print(f"[+] Starting stream for device: {self.selected_device.serial}")
             self.right_status_label.configure(text="Stream has started")
-            
+
             self.stream = ScrcpyCanvasWrapper(
                 self.video_canvas,
                 port=27183,
@@ -75,7 +77,7 @@ class MediaDisplayApp:
             )
             self.stream.start()
             print("[+] Stream started in canvas")
-            
+
             self.info_label.configure(text="Streaming started")
         except Exception as e:
             self.info_label.configure(text=f"Error: {str(e)}")
@@ -102,6 +104,27 @@ class MediaDisplayApp:
         )
         self.device_status_label.pack(pady=5)
 
+    def add_platform_status(self):
+        self.platform_status_label = ctk.CTkLabel(
+            self.right_panel,
+            text="Platform: None detected",
+            font=("Arial", 10),
+            text_color="gray"
+        )
+        self.platform_status_label.pack(pady=(0, 5))
+
+    def update_platform_status(self, platform):
+        if platform:
+            self.platform_status_label.configure(
+                text=f"Platform: {platform['name']}",
+                text_color="green"
+            )
+        else:
+            self.platform_status_label.configure(
+                text="Platform: None detected",
+                text_color="red"
+            )
+
     def on_folder_select(self):
         folder_path, self.media_files = self.folder_selector.select_folder()
         if folder_path and self.media_files:
@@ -127,30 +150,61 @@ class MediaDisplayApp:
         )
 
     def on_media_confirm(self):
-        """
-        Handle media file confirmation - detects file type and processes accordingly.
-        """
         if not self.current_selected_file:
             self.info_label.configure(text="No file selected")
             return
-        
-        # Get file extension to determine type
+
+        # Detect which platform is in the foreground
+        platform = get_active_platform()
+        self.update_platform_status(platform)
+
+        if platform is None:
+            self._show_unknown_platform_popup()
+            return
+
+        self.active_platform = platform
+
         _, ext = os.path.splitext(self.current_selected_file.lower())
-        
-        # Image extensions
+
         image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'}
-        # Video extensions
         video_extensions = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'}
-        
+
         if ext in image_extensions:
-            print(f"Processing image file: {self.current_selected_file}")
             on_image_confirm(self)
         elif ext in video_extensions:
-            print(f"Processing video file: {self.current_selected_file}")
             on_video_confirm(self)
         else:
             self.info_label.configure(text=f"Unsupported file type: {ext}")
-            print(f"Unsupported file extension: {ext}")
+
+    def _show_unknown_platform_popup(self):
+        popup = ctk.CTkToplevel(self.app)
+        popup.title("Platform Not Recognised")
+        popup.geometry("400x180")
+        popup.transient(self.app)
+        popup.grab_set()
+        popup.geometry("+{}+{}".format(
+            int(self.app.winfo_screenwidth() / 2 - 200),
+            int(self.app.winfo_screenheight() / 2 - 90)
+        ))
+
+        ctk.CTkLabel(
+            popup,
+            text="No supported platform detected.",
+            font=("Arial", 14, "bold")
+        ).pack(pady=(20, 5))
+
+        ctk.CTkLabel(
+            popup,
+            text="Open Snapchat or WhatsApp on the device\nbefore confirming.",
+            font=("Arial", 12)
+        ).pack(pady=(0, 20))
+
+        ctk.CTkButton(
+            popup,
+            text="OK",
+            width=100,
+            command=popup.destroy
+        ).pack()
 
     def on_device_selected(self, device):
         self.selected_device = device
