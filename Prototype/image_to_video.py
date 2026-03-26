@@ -243,6 +243,12 @@ def on_image_confirm(app_instance):
         except:
             pass
 
+        app_instance.info_label.configure(text=f"Restarting {platform_name}...")
+        app_instance.app.update()
+
+        from adb_utils import force_stop_and_relaunch
+        force_stop_and_relaunch(app_instance.active_platform["package_name"])
+
         app_instance.info_label.configure(
             text=f"Done — pushed virtual.mp4 to {platform_name} ({w}x{h})"
         )

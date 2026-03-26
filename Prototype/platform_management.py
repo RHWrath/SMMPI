@@ -1,15 +1,21 @@
 import json
 import os
 import subprocess
+import sys
 
 
-PLATFORMS_FILE = os.path.join(os.path.dirname(__file__), "platforms.json")
+PLATFORMS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "platforms.json")
 
 
 def load_platforms() -> list[dict]:
     """Load all platform configs from platforms.json."""
-    with open(PLATFORMS_FILE, "r") as f:
-        data = json.load(f)
+    print(f"[DEBUG] PLATFORMS_FILE = {PLATFORMS_FILE}")
+    print(f"[DEBUG] File exists: {os.path.exists(PLATFORMS_FILE)}")
+    print(f"[DEBUG] File size: {os.path.getsize(PLATFORMS_FILE) if os.path.exists(PLATFORMS_FILE) else 'N/A'}")
+    with open(PLATFORMS_FILE, "r", encoding="utf-8-sig") as f:
+        contents = f.read()
+    print(f"[DEBUG] File contents: {repr(contents[:100])}")
+    data = json.loads(contents)
     return data["platforms"]
 
 
@@ -19,8 +25,9 @@ def get_foreground_package() -> str | None:
     Returns the package name string or None if it can't be determined.
     """
     try:
+        pipe_cmd = "findstr" if sys.platform == "win32" else "grep"
         result = subprocess.run(
-            "adb shell dumpsys activity activities | grep mResumedActivity",
+            f"adb shell dumpsys activity activities | {pipe_cmd} ResumedActivity",
             capture_output=True,
             text=True,
             timeout=5,
@@ -32,7 +39,7 @@ def get_foreground_package() -> str | None:
             return None
 
         # Output looks like:
-        # mResumedActivity: ActivityRecord{... com.snapchat.android/.app.SnapActivity ...}
+        # ResumedActivity: ActivityRecord{... com.snapchat.android/.LandingPageActivity ...}
         # We want the package name before the slash
         for part in output.split():
             if "/" in part and "." in part:
