@@ -1,2 +1,14 @@
 ﻿#all documentation
 /Docs/
+
+# Build outputs (.NET / MSBuild) — any depth, incl. WPFTest/WPFTest/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio / Rider
+.vs/
+*.user
+*.userosscache
+*.suo
