@@ -18,6 +18,10 @@ datas_list = []
 if os.path.exists('scrcpy-server-v3.3.4'):
     datas_list.append(('scrcpy-server-v3.3.4', '.'))
 
+if os.path.exists('platform-tools'):
+    datas_list.append(('platform-tools', 'platform-tools'))
+
+
 a = Analysis(
     ['main.py'],
     pathex=[],
@@ -47,11 +51,12 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name='ADB-Media-Manager',
+    icon='HermesI.ico',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
