@@ -1,58 +1,81 @@
-﻿using SMM.Data;
+﻿using System.Collections.ObjectModel;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using AdvancedSharpAdbClient.Models;
+using WPFTest.Services;
 
-namespace WPFTest
+namespace WPFTest;
+
+public partial class MainWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    /// 
+    private readonly AdbConnectionService _adb = new();
+    private readonly List<DeviceData> _devices = new();
+    private DeviceData? _connectedDevice;
 
-    public partial class MainWindow : Window
+    public MainWindow()
     {
-        [DllImport("kernel32.dll")]
-        static extern bool AllocConsole();
-        public MainWindow()
-        {
-            
-            InitializeComponent();
-            AllocConsole();  // Call to open console
-            Console.WriteLine("Console opened!");
+        InitializeComponent();
+        Loaded += (_, _) => OnLoaded();
+    }
 
-            ComboBox1.ItemsSource = Enum.GetValues(typeof(LogCategory));
-            ComboBox1.SelectedIndex = 0;
+    private void OnLoaded()
+    {
+        var bundled = AppPaths.BundledScrcpyServerPath;
+        if (!File.Exists(bundled))
+        {
+            AdbStatusLabel.Text =
+                $"Warning: bundled scrcpy-server not found at:\n{bundled}";
+            AdbStatusLabel.Foreground = System.Windows.Media.Brushes.DarkRed;
         }
 
-        private void InitApplication(object sender, RoutedEventArgs e)
+        RefreshDevicesButton_OnClick(this, new RoutedEventArgs());
+        UpdateConnectButtonState();
+    }
+
+    private void RefreshDevicesButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdbStatusLabel.Foreground = System.Windows.Media.Brushes.DarkOrange;
+        var err = _adb.TryEnsureAdbServerStarted();
+        if (err is not null)
         {
-            
-            var target = new TargetData();
-
-            target.Feed(LogCategory.Chat, new ChatLog("Hi from Discord", "user123", DateTime.Now));
-            target.Feed(LogCategory.Chat, new ChatLog("Hi my name is Chuck", "user124", DateTime.Now));
-
-            target.Feed(LogCategory.User, new UserLog("user123", "NicolasCage", DateOnly.FromDateTime(DateTime.Now),
-                "discord,steam,etc...", DateTime.Now));
-            target.Feed(LogCategory.User, new UserLog("user124", "ChuckNorriss", DateOnly.FromDateTime(DateTime.Now),
-                "discord,steam,etc...", DateTime.Now));
-
-            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes("C:\\Users\\neoks\\Videos\\test.mkv"), "video/mkv", DateTime.Now));
-            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes("C:\\Users\\neoks\\Videos\\test.mkv"), "video/mp4", DateTime.Now));
-            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes("C:\\Users\\neoks\\Videos\\test.mkv"), "video/wav", DateTime.Now));
-            
-            foreach (var log in target.ExtractLogs((LogCategory)ComboBox1.SelectedValue))
-                Console.WriteLine(log.ToString());
+            AdbStatusLabel.Text = err;
+            _devices.Clear();
+            DeviceListBox.ItemsSource = null;
+            ConnectDeviceButton.IsEnabled = false;
+            return;
         }
+
+        _devices.Clear();
+        _devices.AddRange(_adb.GetDevices());
+        DeviceListBox.ItemsSource = new ObservableCollection<string>(
+            _devices.Select(d => _adb.GetDeviceDisplayName(d) ?? d.Serial));
+
+        AdbStatusLabel.Text = _devices.Count == 0
+            ? "ADB OK — no devices online. Connect USB and enable debugging."
+            : $"ADB OK — {_devices.Count} device(s). Select one and click Use selected device.";
+
+        UpdateConnectButtonState();
+    }
+
+    private void DeviceListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        UpdateConnectButtonState();
+
+    private void UpdateConnectButtonState() =>
+        ConnectDeviceButton.IsEnabled = DeviceListBox.SelectedIndex >= 0 && _devices.Count > 0;
+
+    private void ConnectDeviceButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var i = DeviceListBox.SelectedIndex;
+        if (i < 0 || i >= _devices.Count)
+        {
+            return;
+        }
+
+        _connectedDevice = _devices[i];
+        InfoLabel.Text = $"Connected: {_adb.GetDeviceDisplayName(_connectedDevice)}";
+        StreamPlaceholderLabel.Text = "Ready for scrcpy stream integration.";
+        AdbStatusLabel.Foreground = System.Windows.Media.Brushes.DarkGreen;
+        AdbStatusLabel.Text = "Device selected. Screen mirror + push will use this device.";
     }
 }

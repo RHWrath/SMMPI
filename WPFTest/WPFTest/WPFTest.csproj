@@ -7,6 +7,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AdvancedSharpAdbClient" Version="3.6.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Resources/scrcpy-server-v3.3.4" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

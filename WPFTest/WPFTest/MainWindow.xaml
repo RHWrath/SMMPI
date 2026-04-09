@@ -3,13 +3,104 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:WPFTest"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-            <ComboBox x:Name="ComboBox1" HorizontalAlignment="Center" Margin="0,0,0,10" VerticalAlignment="Top" Width="120"/>
-            <Button x:Name="Init" Content="Button" HorizontalAlignment="Center" VerticalAlignment="Center" Click="InitApplication"/>
+        Title="ADB Media Manager"
+        Height="800"
+        Width="1400"
+        MinHeight="600"
+        MinWidth="900">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" MinWidth="200" />
+            <ColumnDefinition Width="*" MinWidth="160" />
+            <ColumnDefinition Width="2*" MinWidth="280" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: media (placeholder — folder + thumbnails later) -->
+        <DockPanel Grid.Column="0" Margin="0,0,5,0">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <TextBlock Text="Media" FontSize="16" FontWeight="Bold" Margin="0,0,0,6" />
+                <Button x:Name="SelectFolderButton"
+                        Content="Select folder"
+                        IsEnabled="False"
+                        ToolTip="Coming soon: choose a folder of images/videos." />
+                <TextBlock x:Name="FolderPathLabel"
+                           Text="No folder selected"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0"
+                           FontSize="11"
+                           Foreground="Gray" />
+            </StackPanel>
+            <GroupBox Header="Files" Padding="4">
+                <ListBox x:Name="MediaFilesList"
+                         IsEnabled="False"
+                         ToolTip="Thumbnails / file list will appear here." />
+            </GroupBox>
+        </DockPanel>
+
+        <!-- Middle: selection + confirm -->
+        <StackPanel Grid.Column="1"
+                    Margin="5,0"
+                    VerticalAlignment="Top">
+            <TextBlock Text="Selection" FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
+            <TextBlock x:Name="InfoLabel"
+                       Text="Select a folder to display images and videos"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,12" />
+            <Button x:Name="ConfirmSelectionButton"
+                    Content="Confirm selection"
+                    IsEnabled="False"
+                    Padding="12,8"
+                    ToolTip="Push converted media to device (not wired yet)." />
         </StackPanel>
+
+        <!-- Right: device + stream placeholder -->
+        <DockPanel Grid.Column="2" Margin="5,0,0,0">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <TextBlock Text="Device" FontSize="16" FontWeight="Bold" Margin="0,0,0,6" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button x:Name="RefreshDevicesButton"
+                            Content="Refresh devices"
+                            Click="RefreshDevicesButton_OnClick"
+                            Padding="10,4"
+                            Margin="0,0,8,0" />
+                    <Button x:Name="ConnectDeviceButton"
+                            Content="Use selected device"
+                            Click="ConnectDeviceButton_OnClick"
+                            Padding="10,4"
+                            IsEnabled="False" />
+                </StackPanel>
+                <ListBox x:Name="DeviceListBox"
+                         MinHeight="72"
+                         MaxHeight="120"
+                         SelectionChanged="DeviceListBox_OnSelectionChanged" />
+                <TextBlock x:Name="AdbStatusLabel"
+                           TextWrapping="Wrap"
+                           FontSize="11"
+                           Margin="0,6,0,0"
+                           Foreground="DarkOrange" />
+            </StackPanel>
+
+            <TextBlock DockPanel.Dock="Top"
+                       Text="Device screen"
+                       FontWeight="Bold"
+                       Margin="0,0,0,4" />
+            <TextBlock x:Name="StreamPlaceholderLabel"
+                       DockPanel.Dock="Bottom"
+                       Text="Stream will appear here (scrcpy client not ported yet)."
+                       TextWrapping="Wrap"
+                       FontSize="11"
+                       Foreground="Gray"
+                       Margin="0,6,0,0" />
+            <Border Background="Black"
+                    CornerRadius="4"
+                    MinHeight="240">
+                <TextBlock Text="—"
+                           Foreground="#444"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="48" />
+            </Border>
+        </DockPanel>
     </Grid>
 </Window>
