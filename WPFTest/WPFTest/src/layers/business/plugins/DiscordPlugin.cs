@@ -1,5 +1,9 @@
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using OAuth2Bridge;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace Layers.Business.Plugins
@@ -7,6 +11,13 @@ namespace Layers.Business.Plugins
     class DiscordPlugin : IPlatformPlugin
     {
         public string PlatformName => "Discord";
+
+        public string ClientID => Environment.GetEnvironmentVariable("DISCORD_CLIENT_ID")?.Trim().Trim('"');
+
+        public string ClientSecret => Environment.GetEnvironmentVariable("DISCORD_CLIENT_SECRET")?.Trim().Trim('"');
+
+        public int port => 4444;
+
         public void connect(string device_id)
         {
             // Implement connection logic to Discord API using device_id (e.g., bot token or user credentials).
@@ -26,9 +37,34 @@ namespace Layers.Business.Plugins
             Console.WriteLine($"Sending message to {payload.Recipient} on Discord: {payload.Message} with media: {mediaFilepath}");
         }
 
-        public void Authenticate()
+        public async Task Authenticate()
         {
+            var logger = LoggerFactory.Create(builder => builder.AddConsole())
+           .CreateLogger<OAuthLogger>();
 
+            var oAuthLogger = new OAuthLogger(logger);
+
+            // Create the OAuth server instance
+            var server = Tools.OAuthServer.CreateServer(ClientID, ClientSecret, port, oAuthLogger, PlatformName);
+
+            // Add necessary Discord scopes
+            server.Scopes.Add(DiscordScopes.Email);
+            server.Scopes.Add(DiscordScopes.Identify);
+
+            try
+            {
+                // Start the authentication process
+                var userInfo = await server.AuthenticateAsync(CancellationToken.None, @"../../../src/data/success.html");
+                Console.WriteLine(JsonConvert.SerializeObject(userInfo, Formatting.Indented));
+            }
+            catch (OAuthException ex)
+            {
+                Console.WriteLine($"Authentication failed: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+            }
         }
     }
 }

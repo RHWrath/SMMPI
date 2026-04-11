@@ -1,4 +1,5 @@
 ﻿using Layers.Business.Logging;
+using Layers.Business.Plugins;
 using Layers.Tools;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -26,7 +27,8 @@ namespace WPFTest
         static extern bool AllocConsole();
         public MainWindow()
         {
-            
+            EnvReader.Load("../../../../.env");
+
             InitializeComponent();
             AllocConsole();  // Call to open console
             Console.WriteLine("Console opened!");
@@ -34,7 +36,7 @@ namespace WPFTest
             ComboBox1.ItemsSource = Enum.GetValues(typeof(LogCategory));
             ComboBox1.SelectedIndex = 0;
 
-            EnvReader.Load("../../../../.env");
+            
         }
 
         private void btnReadLogs_Click(object sender, RoutedEventArgs e)
@@ -58,11 +60,10 @@ namespace WPFTest
                 Console.WriteLine(log.ToString());
         }
 
-        private void btnAuth_Click(object sender, RoutedEventArgs e)
+        private async void btnAuth_Click(object sender, RoutedEventArgs e)
         {
-            Console.WriteLine(Directory.GetCurrentDirectory());
-            string auth_url = Environment.GetEnvironmentVariable("DISCORD_AUTH_URL");
-            Console.WriteLine($"Auth URL: {auth_url}");
+            DiscordPlugin plugin = new DiscordPlugin();
+            await plugin.Authenticate();
         }
     }
 }
