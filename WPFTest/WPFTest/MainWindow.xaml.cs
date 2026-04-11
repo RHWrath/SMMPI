@@ -43,6 +43,7 @@ namespace WPFTest
         {
             
             var target = new TargetData();
+            var file = Environment.GetEnvironmentVariable("TEST_PATH").Trim('"').Trim();
 
             target.Feed(LogCategory.Chat, new ChatLog("Hi from Discord", "user123", DateTime.Now));
             target.Feed(LogCategory.Chat, new ChatLog("Hi my name is Chuck", "user124", DateTime.Now));
@@ -52,9 +53,9 @@ namespace WPFTest
             target.Feed(LogCategory.User, new UserLog("user124", "ChuckNorriss", DateOnly.FromDateTime(DateTime.Now),
                 "discord,steam,etc...", DateTime.Now));
 
-            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes("C:\\Users\\neoks\\Videos\\test.mkv"), "video/mkv", DateTime.Now));
-            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes("C:\\Users\\neoks\\Videos\\test.mkv"), "video/mp4", DateTime.Now));
-            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes("C:\\Users\\neoks\\Videos\\test.mkv"), "video/wav", DateTime.Now));
+            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes(file), "video/mkv", DateTime.Now));
+            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes(file), "video/mp4", DateTime.Now));
+            target.Feed(LogCategory.Recording, new MediaLog(File.ReadAllBytes(file), "video/wav", DateTime.Now));
             
             foreach (var log in target.ExtractLogs((LogCategory)ComboBox1.SelectedValue))
                 Console.WriteLine(log.ToString());
