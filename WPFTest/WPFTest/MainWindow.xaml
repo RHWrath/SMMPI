@@ -5,11 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFTest"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="900">
     <Grid>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Width="300">
+            <Button x:Name="btnAuth" Content="Authenticate Discord" HorizontalAlignment="Center" Margin="0,0,0,0" VerticalAlignment="Center" Click="btnAuth_Click"/>
+        </StackPanel>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="300">
+            <Button x:Name="btnControl" Content="Button" HorizontalAlignment="Center" Margin="0,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Width="300">
             <ComboBox x:Name="ComboBox1" HorizontalAlignment="Center" Margin="0,0,0,10" VerticalAlignment="Top" Width="120"/>
-            <Button x:Name="Init" Content="Button" HorizontalAlignment="Center" VerticalAlignment="Center" Click="InitApplication"/>
+            <Button x:Name="btnReadLogs" Content="Read logs" HorizontalAlignment="Center" VerticalAlignment="Center" Click="btnReadLogs_Click"/>
         </StackPanel>
     </Grid>
 </Window>

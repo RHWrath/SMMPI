@@ -1,4 +1,4 @@
-﻿using SMM.Data;
+﻿using Layers.Business.Logging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -34,7 +34,7 @@ namespace WPFTest
             ComboBox1.SelectedIndex = 0;
         }
 
-        private void InitApplication(object sender, RoutedEventArgs e)
+        private void btnReadLogs_Click(object sender, RoutedEventArgs e)
         {
             
             var target = new TargetData();
@@ -53,6 +53,11 @@ namespace WPFTest
             
             foreach (var log in target.ExtractLogs((LogCategory)ComboBox1.SelectedValue))
                 Console.WriteLine(log.ToString());
+        }
+
+        private void btnAuth_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }
