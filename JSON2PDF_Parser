@@ -1,0 +1,56 @@
+//ParserJSONtoPDF
+//For Social Media Masking
+//Gemaakt door: J.C.G. van den Hurk
+
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.IO;
+using System.Text.Json;
+using System.Reflection.Metadata;
+using System.Net.Mail;
+using System.Dynamic;
+
+
+class ParserJSONtoPDF
+{
+    //Methode om de JSON bestanden te importeren, waarbij de inhoud van elk bestand wordt gelezen en weergegeven in de console. Deze methode kan later worden uitgebreid om de JSON data te parseren en te gebruiken voor PDF generatie.
+    public async Task ImportJSONFiles()
+    {
+        string inputDirectory = "INPUTJSON";
+        string[] jsonFiles = Directory.GetFiles(inputDirectory, "*.json");
+
+// Lees de inhoud van elk JSON bestand
+        foreach (string jsonFile in jsonFiles)
+        {
+            string jsonContent = File.ReadAllText(jsonFile);
+            Console.WriteLine("Inhoud van " + jsonFile + ": " + jsonContent);
+            // Controle of de JSON inhoud uitgelezen kan worden binnen de Terminal.
+        }
+        
+    }
+}
+class DiscordMessageInfo
+{
+    public DateTime Timestamp { get; set; }
+    public string Author { get; set; }
+    public string Content { get; set; }
+    public string AttachmentURL { get; set; } // null als er geen attachment is
+    
+}
+
+public class ParserJSONtoPDFTests
+{
+    public async Task TestImportJSONFiles()
+    {
+        var parser = new ParserJSONtoPDF();
+        await parser.ImportJSONFiles();
+        // Hier kunnen assertions worden toegevoegd om te controleren of de JSON bestanden correct zijn geïmporteerd.
+    }
+}
+
+//Maken van de PDFs met alle informatie van de JSON.
+public class PDFGenerator
+{
+    // Deze klasse zal verantwoordelijk zijn voor het genereren van PDF bestanden op basis van de geparste JSON data. De implementatie hiervan zal later worden toegevoegd.
+}
