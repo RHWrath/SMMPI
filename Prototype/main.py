@@ -5,13 +5,12 @@ import threading
 
 from folder_selector import FolderSelector
 from image_display import ImageDisplay
-from ui_setup import UISetup
+from ui_setup import UISetup, show_toast
 from adb_setup import start_adb_server
 from device_manager import DeviceManager
 from stream_wrapper import ScrcpyCanvasWrapper
 from image_to_video import on_image_confirm
 from video import on_video_confirm
-from platform_management import get_active_platform, is_known_platform
 
 
 class MediaDisplayApp:
@@ -35,7 +34,11 @@ class MediaDisplayApp:
         self.ffmpeg_process = None
         self.adb_process = None
         self.stream = None
-        self.active_platform = None  # set on confirm via ADB detection
+        self.remote_folder = "/storage/emulated/0/Android/data/com.snapchat.android/files/Camera1/"
+
+        # Connection monitoring
+        self._monitor_after_id = None
+        self._is_reconnecting = False
 
         self.setup_ui()
         self.app.withdraw()
@@ -48,12 +51,11 @@ class MediaDisplayApp:
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
 
-        (self.right_panel, self.video_canvas, self.right_status_label) = UISetup.setup_right_panel(main_frame)
+        (self.right_panel, self.video_canvas, self.right_status_label, self.close_app_button) = UISetup.setup_right_panel(main_frame)
 
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
         self.add_device_status()
-        self.add_platform_status()
 
     def start_stream(self):
         if not self.selected_device:
@@ -96,34 +98,87 @@ class MediaDisplayApp:
         else:
             device_info = ""
 
-        self.device_status_label = ctk.CTkLabel(
-            self.right_panel,
-            text=device_info,
-            font=("Arial", 10),
-            text_color="green" if self.selected_device else "red"
-        )
-        self.device_status_label.pack(pady=5)
-
-    def add_platform_status(self):
-        self.platform_status_label = ctk.CTkLabel(
-            self.right_panel,
-            text="Platform: None detected",
-            font=("Arial", 10),
-            text_color="gray"
-        )
-        self.platform_status_label.pack(pady=(0, 5))
-
-    def update_platform_status(self, platform):
-        if platform:
-            self.platform_status_label.configure(
-                text=f"Platform: {platform['name']}",
-                text_color="green"
+        if hasattr(self, 'device_status_label') and self.device_status_label.winfo_exists():
+            self.device_status_label.configure(
+                text=device_info,
+                text_color="green" if self.selected_device else "red"
             )
         else:
-            self.platform_status_label.configure(
-                text="Platform: None detected",
-                text_color="red"
+            self.device_status_label = ctk.CTkLabel(
+                self.right_panel,
+                text=device_info,
+                font=("Arial", 10),
+                text_color="green" if self.selected_device else "red"
             )
+            self.device_status_label.pack(pady=5)
+
+    def _start_connection_monitor(self):
+        """Start polling the device connection every 3 seconds."""
+        self._stop_connection_monitor()
+        self._check_device_connection()
+
+    def _stop_connection_monitor(self):
+        """Stop the connection monitor loop."""
+        if self._monitor_after_id is not None:
+            self.app.after_cancel(self._monitor_after_id)
+            self._monitor_after_id = None
+
+    def _check_device_connection(self):
+        """Check if the device is still reachable via ADB."""
+        if self._is_reconnecting:
+            return
+
+        if self.selected_device:
+            try:
+                # Quick shell command to check if device responds
+                self.selected_device.shell("echo ping")
+            except Exception as e:
+                print(f"[!] Device disconnected: {e}")
+                self._handle_disconnect()
+                return
+
+        # Schedule next check
+        self._monitor_after_id = self.app.after(3000, self._check_device_connection)
+
+    def _handle_disconnect(self):
+        """Clean up and prompt for reconnection."""
+        self._is_reconnecting = True
+        self._stop_connection_monitor()
+
+        # Stop the stream
+        if self.stream:
+            try:
+                self.stream.stop()
+            except Exception as e:
+                print(f"[!] Error stopping stream: {e}")
+            self.stream = None
+
+        # Clear device reference
+        self.selected_device = None
+        self.close_app_button.configure(state="disabled")
+
+        # Update UI
+        self.device_status_label.configure(
+            text="Device disconnected",
+            text_color="red"
+        )
+        self.right_status_label.configure(text="Stream stopped - device disconnected")
+
+        show_toast(self.app, "Device disconnected - reconnect to continue", fg_color="#d94040", duration=3000)
+
+        # Small delay so the toast is visible before the device window pops up
+        self.app.after(1500, self._show_reconnect_dialog)
+
+    def _show_reconnect_dialog(self):
+        """Re-show the device selection window for reconnection."""
+        self._is_reconnecting = False
+
+        # Reset the device manager state so it doesn't carry over old selection
+        self.device_manager.selected_device = None
+        self.device_manager.selected_device_index = None
+        self.device_manager.available_devices = []
+
+        self.device_manager.show_device_selection()
 
     def on_folder_select(self):
         folder_path, self.media_files = self.folder_selector.select_folder()
@@ -150,69 +205,68 @@ class MediaDisplayApp:
         )
 
     def on_media_confirm(self):
+        """
+        Handle media file confirmation - detects file type and processes accordingly.
+        """
         if not self.current_selected_file:
             self.info_label.configure(text="No file selected")
             return
 
-        # Detect which platform is in the foreground
-        platform = get_active_platform()
-        self.update_platform_status(platform)
-
-        if platform is None:
-            self._show_unknown_platform_popup()
-            return
-
-        self.active_platform = platform
-
+        # Get file extension to determine type
         _, ext = os.path.splitext(self.current_selected_file.lower())
 
+        # Image extensions
         image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'}
+        # Video extensions
         video_extensions = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'}
 
         if ext in image_extensions:
+            print(f"Processing image file: {self.current_selected_file}")
             on_image_confirm(self)
         elif ext in video_extensions:
+            print(f"Processing video file: {self.current_selected_file}")
             on_video_confirm(self)
         else:
             self.info_label.configure(text=f"Unsupported file type: {ext}")
-
-    def _show_unknown_platform_popup(self):
-        popup = ctk.CTkToplevel(self.app)
-        popup.title("Platform Not Recognised")
-        popup.geometry("400x180")
-        popup.transient(self.app)
-        popup.grab_set()
-        popup.geometry("+{}+{}".format(
-            int(self.app.winfo_screenwidth() / 2 - 200),
-            int(self.app.winfo_screenheight() / 2 - 90)
-        ))
-
-        ctk.CTkLabel(
-            popup,
-            text="No supported platform detected.",
-            font=("Arial", 14, "bold")
-        ).pack(pady=(20, 5))
-
-        ctk.CTkLabel(
-            popup,
-            text="Open Snapchat or WhatsApp on the device\nbefore confirming.",
-            font=("Arial", 12)
-        ).pack(pady=(0, 20))
-
-        ctk.CTkButton(
-            popup,
-            text="OK",
-            width=100,
-            command=popup.destroy
-        ).pack()
+            print(f"Unsupported file extension: {ext}")
 
     def on_device_selected(self, device):
         self.selected_device = device
         self.add_device_status()
+        self.close_app_button.configure(state="normal", command=self.close_foreground_app)
         self.start_stream()
+        self._start_connection_monitor()
+
+    def close_foreground_app(self):
+        """Detect the foreground app on the device and force stop it."""
+        if not self.selected_device:
+            self.info_label.configure(text="No device connected")
+            return
+
+        try:
+            from platform_management import get_active_platform
+            from adb_utils import force_stop
+
+            platform_config = get_active_platform()
+
+            if platform_config is None:
+                show_toast(self.app, "No supported platform in foreground", fg_color="#d94040")
+                return
+
+            package_name = platform_config["package_name"]
+            platform_name = platform_config["name"]
+
+            force_stop(package_name)
+            show_toast(self.app, f"{platform_name} closed")
+            print(f"[+] Closed {platform_name} ({package_name})")
+
+        except Exception as e:
+            show_toast(self.app, f"Failed to close app", fg_color="#d94040")
+            print(f"[ERROR] close_foreground_app: {e}")
 
     def run(self):
         def on_close():
+            self._stop_connection_monitor()
             if self.stream:
                 self.stream.stop()
             self.app.destroy()

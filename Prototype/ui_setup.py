@@ -119,6 +119,17 @@ class UISetup:
             text="Stream will display here - click to interact",
             font=("Arial", 10)
         )
-        status_label.pack(pady=10)
+        status_label.pack(pady=(10, 5))
 
-        return right_panel, video_canvas, status_label
+        close_app_button = ctk.CTkButton(
+            right_panel,
+            text="Close Foreground App",
+            corner_radius=32,
+            font=("Arial", 12),
+            fg_color="#d94040",
+            hover_color="#b33030",
+            state="disabled",
+        )
+        close_app_button.pack(pady=(0, 5))
+
+        return right_panel, video_canvas, status_label, close_app_button

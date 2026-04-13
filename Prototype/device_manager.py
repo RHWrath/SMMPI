@@ -11,6 +11,7 @@ class DeviceManager:
         self.available_devices = []
         self.selected_device_index = None
         self.selected_device = None
+        self.is_initial_launch = True
 
     def show_device_selection(self):
         try:
@@ -90,8 +91,13 @@ class DeviceManager:
         except Exception as e:
             print(f"Error showing main window after device selection: {e}")
 
+        # Only quit app on cancel if this is the first launch
+        # During reconnection, just leave the app running without a device
         if self.selected_device_index is None or not self.available_devices:
-            self.app.quit()
+            if self.is_initial_launch:
+                self.app.quit()
+
+        self.is_initial_launch = False
 
     def refresh_device_list(self):
         try:
