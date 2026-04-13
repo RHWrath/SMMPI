@@ -3,6 +3,7 @@ import tempfile
 import os
 import sys
 from PIL import Image
+from ui_setup import show_toast
 
 
 def get_resource_path(relative_path):
@@ -247,6 +248,8 @@ def push_image_to_gallery(app_instance, platform_config):
     app_instance.info_label.configure(
         text=f"Image pushed to gallery. Use WhatsApp attach > Gallery to send it."
     )
+    show_toast(app_instance.app, "Image sent successfully")
+
 
 
 def push_image_as_video(app_instance, platform_config):
@@ -310,6 +313,7 @@ def push_image_as_video(app_instance, platform_config):
     app_instance.info_label.configure(
         text=f"Successfully pushed {filename} ({width}x{height}) to device"
     )
+    show_toast(app_instance.app, "Image sent successfully")
 
 
 def on_image_confirm(app_instance):
