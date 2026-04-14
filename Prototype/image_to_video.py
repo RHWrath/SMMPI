@@ -3,42 +3,7 @@ import tempfile
 import os
 import sys
 from PIL import Image
-
-
-def get_resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-
-def get_ffmpeg_path():
-    try:
-        import imageio_ffmpeg
-        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-        if os.path.exists(ffmpeg_path):
-            print(f"[DEBUG] Using imageio-ffmpeg: {ffmpeg_path}")
-            return ffmpeg_path
-    except ImportError:
-        print("[DEBUG] imageio-ffmpeg not available, trying other methods")
-    except Exception as e:
-        print(f"[DEBUG] Error getting imageio-ffmpeg path: {e}")
-
-    bundled_ffmpeg = get_resource_path("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
-    if os.path.exists(bundled_ffmpeg):
-        print(f"[DEBUG] Using bundled ffmpeg: {bundled_ffmpeg}")
-        return bundled_ffmpeg
-
-    import shutil
-    ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg:
-        print(f"[DEBUG] Using system ffmpeg: {ffmpeg}")
-        return ffmpeg
-
-    print("[ERROR] No ffmpeg found!")
-    return "ffmpeg"
-
+from utils import get_ffmpeg_path
 
 def get_device_resolution(device):
     try:
@@ -133,14 +98,9 @@ def convert_image_to_video(image_path, output_video_path, platform_config, durat
 
         ffmpeg_path = get_ffmpeg_path()
 
-        if not os.path.exists(ffmpeg_path):
-            import shutil
-            system_ffmpeg = shutil.which("ffmpeg")
-            if system_ffmpeg:
-                ffmpeg_path = system_ffmpeg
-            else:
-                print("[ERROR] FFmpeg not found")
-                return False
+        if not ffmpeg_path:
+            print("[ERROR] FFmpeg not found")
+            return False
 
         cmd = [
             ffmpeg_path,

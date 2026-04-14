@@ -5,42 +5,7 @@ import sys
 import subprocess
 import tempfile
 
-
-def get_resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    
-    return os.path.join(base_path, relative_path)
-
-
-def get_ffmpeg_path():
-    """Get ffmpeg path, preferring bundled version"""
-    # Try imageio-ffmpeg first (cross-platform, bundled binary)
-    try:
-        import imageio_ffmpeg
-        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-        if os.path.exists(ffmpeg_path):
-            return ffmpeg_path
-    except (ImportError, Exception):
-        pass
-    
-    # Check if bundled version exists
-    bundled_ffmpeg = get_resource_path("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
-    if os.path.exists(bundled_ffmpeg):
-        return bundled_ffmpeg
-    
-    # Fall back to system ffmpeg
-    import shutil
-    ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg:
-        return ffmpeg
-    
-    return "ffmpeg"  # Last resort, let it fail with clear error
-
+from utils import get_ffmpeg_path
 
 class ImageDisplay:
     def __init__(self, parent_scroll_frame):

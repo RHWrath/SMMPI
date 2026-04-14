@@ -2,11 +2,12 @@ import customtkinter as ctk
 import os
 import sys
 import threading
+import time
 
 from folder_selector import FolderSelector
 from image_display import ImageDisplay
 from ui_setup import UISetup
-from adb_setup import start_adb_server
+from adb_setup import start_adb_server, stop_adb_server
 from device_manager import DeviceManager
 from stream_wrapper import ScrcpyCanvasWrapper
 from image_to_video import on_image_confirm
@@ -125,6 +126,26 @@ class MediaDisplayApp:
                 text_color="red"
             )
 
+    def detect_active_platform_with_retry(self, attempts=6, delay=1):
+        """
+        Try multiple times to detect the currently active platform.
+        This makes detection more stable when the phone UI is in transition.
+        """
+        detected_platform = None
+        for attempt in range(1, attempts + 1):
+            detected_platform = get_active_platform()
+            print(f"[Debug] Platform detection attepmt {attempt}/{attempts}: {detected_platform['name']}")            
+            if detected_platform is not None:
+                return detected_platform
+          
+            self.info_label.configure(
+                text=f"Detecting platform... (attempt {attempt}/{attempts})"
+            )
+            self.app.update()
+            time.sleep(delay)
+        return None
+
+
     def on_folder_select(self):
         folder_path, self.media_files = self.folder_selector.select_folder()
         if folder_path and self.media_files:
@@ -154,11 +175,17 @@ class MediaDisplayApp:
             self.info_label.configure(text="No file selected")
             return
 
+        self.info_label.configure(
+            text="Detecting active platform..."
+        )
+        self.app.update()
+
         # Detect which platform is in the foreground
-        platform = get_active_platform()
+        platform = self.detect_active_platform_with_retry()
         self.update_platform_status(platform)
 
         if platform is None:
+            self.info_label.configure(text="No supported platform detected.")
             self._show_unknown_platform_popup()
             return
 
@@ -195,7 +222,7 @@ class MediaDisplayApp:
 
         ctk.CTkLabel(
             popup,
-            text="Open Snapchat or WhatsApp on the device\nbefore confirming.",
+            text="Open Snapchat or WhatsApp on the phone,\nmake sure it is in the foreground,\nthen try again.",
             font=("Arial", 12)
         ).pack(pady=(0, 20))
 
@@ -215,6 +242,7 @@ class MediaDisplayApp:
         def on_close():
             if self.stream:
                 self.stream.stop()
+            stop_adb_server()
             self.app.destroy()
 
         self.app.protocol("WM_DELETE_WINDOW", on_close)

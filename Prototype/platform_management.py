@@ -1,58 +1,65 @@
 import json
 import os
 import subprocess
-import sys
-
-
-PLATFORMS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "platforms.json")
-
+from utils import get_platforms_file, get_adb_path, debug_log
 
 def load_platforms() -> list[dict]:
     """Load all platform configs from platforms.json."""
-    print(f"[DEBUG] PLATFORMS_FILE = {PLATFORMS_FILE}")
-    print(f"[DEBUG] File exists: {os.path.exists(PLATFORMS_FILE)}")
-    print(f"[DEBUG] File size: {os.path.getsize(PLATFORMS_FILE) if os.path.exists(PLATFORMS_FILE) else 'N/A'}")
-    with open(PLATFORMS_FILE, "r", encoding="utf-8-sig") as f:
+    platforms_file = get_platforms_file()
+
+    if not platforms_file:
+        print("[ERROR] platforms.json not found")
+        return []
+
+    print(f"[DEBUG] PLATFORMS_FILE = {platforms_file}")
+    print(f"[DEBUG] File exists: {os.path.exists(platforms_file)}")
+    print(f"[DEBUG] File size: {os.path.getsize(platforms_file) if os.path.exists(platforms_file) else 'N/A'}")
+
+    with open(platforms_file, "r", encoding="utf-8-sig") as f:
         contents = f.read()
+
     print(f"[DEBUG] File contents: {repr(contents[:100])}")
     data = json.loads(contents)
     return data["platforms"]
-
 
 def get_foreground_package() -> str | None:
     """
     Ask ADB which app is currently in the foreground.
     Returns the package name string or None if it can't be determined.
     """
+    adb_path = get_adb_path()
+    if not adb_path:
+        print("[DEBUG] ADB not found for platform detection")
+        return None
+
     try:
-        pipe_cmd = "findstr" if sys.platform == "win32" else "grep"
         result = subprocess.run(
-            f"adb shell dumpsys activity activities | {pipe_cmd} ResumedActivity",
+            [adb_path, "shell", "dumpsys", "activity", "activities"],
             capture_output=True,
             text=True,
-            timeout=5,
-            shell=True
+            timeout=12
         )
 
         output = result.stdout.strip()
         if not output:
+            print("[DEBUG] No dumpsys output received")
             return None
 
-        # Output looks like:
-        # ResumedActivity: ActivityRecord{... com.snapchat.android/.LandingPageActivity ...}
-        # We want the package name before the slash
-        for part in output.split():
-            if "/" in part and "." in part:
-                package = part.split("/")[0]
-                # Sanity check: package names don't contain braces or colons
-                if "{" not in package and "}" not in package and ":" not in package:
-                    return package
+        for line in output.splitlines():
+            if "ResumedActivity" in line:
+                for part in line.split():
+                    if "/" in part and "." in part:
+                        package = part.split("/")[0]
+                        if "{" not in package and "}" not in package and ":" not in package:
+                            print(f"[DEBUG] Foreground package detected: {package}")
+                            return package
 
+        print("[DEBUG] No ResumedActivity package found")
         return None
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        print(f"[DEBUG] Foreground package detection failed: {e}")
         return None
-
 
 def get_platform_by_package(package_name: str) -> dict | None:
     """Return the platform config matching the given package name, or None."""

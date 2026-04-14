@@ -2,48 +2,7 @@ import subprocess
 import tempfile
 import os
 import sys
-
-
-def get_resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-
-def get_ffmpeg_path():
-    try:
-        import imageio_ffmpeg
-        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-        if os.path.exists(ffmpeg_path):
-            return ffmpeg_path
-    except (ImportError, Exception):
-        pass
-
-    bundled_ffmpeg = get_resource_path("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
-    if os.path.exists(bundled_ffmpeg):
-        return bundled_ffmpeg
-
-    import shutil
-    ffmpeg = shutil.which("ffmpeg")
-    if ffmpeg:
-        return ffmpeg
-
-    return "ffmpeg"
-
-
-def get_ffprobe_path():
-    bundled_ffprobe = get_resource_path("ffprobe.exe" if sys.platform == "win32" else "ffprobe")
-    if os.path.exists(bundled_ffprobe):
-        return bundled_ffprobe
-
-    import shutil
-    ffprobe = shutil.which("ffprobe")
-    if ffprobe:
-        return ffprobe
-
-    return "ffprobe"
+from utils import get_ffmpeg_path, get_ffprobe_path
 
 
 def get_video_duration(video_path):
@@ -108,6 +67,9 @@ def convert_video(video_path, output_video_path, platform_config, max_duration=6
 
         filter_string = ",".join(filters)
         ffmpeg_path = get_ffmpeg_path()
+        if not ffmpeg_path:
+            print("[ERROR] FFmpeg not found")
+            return False
 
         cmd = [
             ffmpeg_path,
