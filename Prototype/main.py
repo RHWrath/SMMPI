@@ -2,15 +2,19 @@ import customtkinter as ctk
 import os
 import sys
 import threading
+import time
 
 from folder_selector import FolderSelector
 from image_display import ImageDisplay
 from ui_setup import UISetup, show_toast
 from adb_setup import start_adb_server
+from ui_setup import UISetup
+from adb_setup import start_adb_server, stop_adb_server
 from device_manager import DeviceManager
 from stream_wrapper import ScrcpyCanvasWrapper
 from image_to_video import on_image_confirm
 from video import on_video_confirm
+from platform_management import get_active_platform
 
 
 class MediaDisplayApp:
@@ -56,6 +60,7 @@ class MediaDisplayApp:
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
         self.add_device_status()
+        self.add_platform_status()
 
     def start_stream(self):
         if not self.selected_device:
@@ -179,6 +184,49 @@ class MediaDisplayApp:
         self.device_manager.available_devices = []
 
         self.device_manager.show_device_selection()
+        
+    def add_platform_status(self):
+        self.platform_status_label = ctk.CTkLabel(
+            self.right_panel,
+            text="Platform: None detected",
+            font=("Arial", 10),
+            text_color="gray"
+        )
+        self.platform_status_label.pack(pady=(0, 5))    
+        
+    def update_platform_status(self, platform):
+        if not hasattr(self, "platform_status_label") or not self.platform_status_label.winfo_exists():
+            self.add_platform_status()
+
+        if platform:
+            self.platform_status_label.configure(
+                text=f"Platform: {platform['name']}",
+                text_color="green"
+            )
+        else:
+            self.platform_status_label.configure(
+                text="Platform: None detected",
+                text_color="red"
+            )
+
+    def detect_active_platform_with_retry(self, attempts=6, delay=1):
+        detected_platform = None
+        for attempt in range(1, attempts + 1):
+            detected_platform = get_active_platform()
+
+            name = detected_platform["name"] if detected_platform else "None"
+            print(f"[Debug] Platform detection attempt {attempt}/{attempts}: {name}")
+
+            if detected_platform is not None:
+                return detected_platform
+
+            self.info_label.configure(
+                text=f"Detecting platform... (attempt {attempt}/{attempts})"
+            )
+            self.app.update()
+            time.sleep(delay)
+
+        return None
 
     def on_folder_select(self):
         folder_path, self.media_files = self.folder_selector.select_folder()
@@ -212,7 +260,22 @@ class MediaDisplayApp:
             self.info_label.configure(text="No file selected")
             return
 
-        # Get file extension to determine type
+        self.info_label.configure(
+            text="Detecting active platform..."
+        )
+        self.app.update()
+
+        # Detect which platform is in the foreground
+        platform = self.detect_active_platform_with_retry()
+        self.update_platform_status(platform)
+
+        if platform is None:
+            self.info_label.configure(text="No supported platform detected.")
+            self._show_unknown_platform_popup()
+            return
+
+        self.active_platform = platform
+
         _, ext = os.path.splitext(self.current_selected_file.lower())
 
         # Image extensions
@@ -228,7 +291,36 @@ class MediaDisplayApp:
             on_video_confirm(self)
         else:
             self.info_label.configure(text=f"Unsupported file type: {ext}")
-            print(f"Unsupported file extension: {ext}")
+
+    def _show_unknown_platform_popup(self):
+        popup = ctk.CTkToplevel(self.app)
+        popup.title("Platform Not Recognised")
+        popup.geometry("400x180")
+        popup.transient(self.app)
+        popup.grab_set()
+        popup.geometry("+{}+{}".format(
+            int(self.app.winfo_screenwidth() / 2 - 200),
+            int(self.app.winfo_screenheight() / 2 - 90)
+        ))
+
+        ctk.CTkLabel(
+            popup,
+            text="No supported platform detected.",
+            font=("Arial", 14, "bold")
+        ).pack(pady=(20, 5))
+
+        ctk.CTkLabel(
+            popup,
+            text="Open Snapchat or WhatsApp on the phone,\nmake sure it is in the foreground,\nthen try again.",
+            font=("Arial", 12)
+        ).pack(pady=(0, 20))
+
+        ctk.CTkButton(
+            popup,
+            text="OK",
+            width=100,
+            command=popup.destroy
+        ).pack()
 
     def on_device_selected(self, device):
         self.selected_device = device
@@ -244,7 +336,6 @@ class MediaDisplayApp:
             return
 
         try:
-            from platform_management import get_active_platform
             from adb_utils import force_stop
 
             platform_config = get_active_platform()
@@ -269,6 +360,7 @@ class MediaDisplayApp:
             self._stop_connection_monitor()
             if self.stream:
                 self.stream.stop()
+            stop_adb_server()
             self.app.destroy()
 
         self.app.protocol("WM_DELETE_WINDOW", on_close)

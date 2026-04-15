@@ -1,26 +1,29 @@
 # -*- mode: python ; coding: utf-8 -*-
-import shutil
-import sys
 import os
 
-# Find ffmpeg and ffprobe binaries
-ffmpeg_path = shutil.which('ffmpeg')
-ffprobe_path = shutil.which('ffprobe')
-
 binaries_list = []
-if ffmpeg_path:
-    binaries_list.append((ffmpeg_path, '.'))
-if ffprobe_path:
-    binaries_list.append((ffprobe_path, '.'))
-
-# Add scrcpy server file
 datas_list = []
-if os.path.exists('scrcpy-server-v3.3.4'):
-    datas_list.append(('scrcpy-server-v3.3.4', '.'))
 
 if os.path.exists('platform-tools'):
     datas_list.append(('platform-tools', 'platform-tools'))
 
+if os.path.exists('ffmpeg'):
+    datas_list.append(('ffmpeg', 'ffmpeg'))
+
+if os.path.exists('scrcpy-server-v3.3.4'):
+    datas_list.append(('scrcpy-server-v3.3.4', '.'))
+
+if os.path.exists('version.json'):
+    datas_list.append(('version.json', '.'))
+
+if os.path.exists('.install_marker'):
+    datas_list.append(('.install_marker', '.'))
+
+if os.path.exists('platforms.json'):
+    datas_list.append(('platforms.json', '.'))
+
+if os.path.exists('release_notes.txt'):
+    datas_list.append(('release_notes.txt', '.'))
 
 a = Analysis(
     ['main.py'],
@@ -43,6 +46,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -51,7 +55,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name='ADB-Media-Manager',
-    icon='HermesI.ico',
+    icon='ADB-Media-Manager.ico',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -63,6 +67,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
 coll = COLLECT(
     exe,
     a.binaries,

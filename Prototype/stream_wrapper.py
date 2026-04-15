@@ -79,7 +79,7 @@ class ScrcpyCanvasWrapper:
         
         print(f"[+] Stream resolution: {self.stream.width}x{self.stream.height}")
         
-        while self.stream.running:
+        while self.running and self.stream and self.stream.running:
             try:
                 frame = self.stream.frame_queue.get(timeout=0.1)
                 

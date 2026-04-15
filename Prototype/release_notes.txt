@@ -1,0 +1,12 @@
+ADB-Media-Manager v1.1.0
+
+[NEW]
+- Test
+- Test
+
+[FIX]
+- Test
+- Test
+
+[IMPROVED]
+- Test

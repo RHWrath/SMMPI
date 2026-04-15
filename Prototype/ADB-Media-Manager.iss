@@ -1,5 +1,5 @@
 #define MyAppName "ADB-Media-Manager"
-#define MyAppVersion "1.0.0"
+#include "version.iss"
 #define MyAppPublisher "ADB-Media-Manager"
 #define MyAppExeName "ADB-Media-Manager.exe"
 
@@ -29,6 +29,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Files]
 Source: "dist\ADB-Media-Manager\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "release_notes.txt"; Flags: dontcopy
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -38,12 +39,42 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+var
+  ReleaseNotesPage: TOutputMsgMemoWizardPage;
+
+procedure InitializeWizard;
+var
+  Notes: AnsiString;
+begin
+  ReleaseNotesPage :=
+    CreateOutputMsgMemoPage(
+      wpReady,
+      'What''s New',
+      'Changes in this version',
+      'Here are the latest updates:',
+      ''
+    );
+
+  Notes := '';
+
+  try
+    ExtractTemporaryFile('release_notes.txt');
+
+    if LoadStringFromFile(ExpandConstant('{tmp}\release_notes.txt'), Notes) then
+      ReleaseNotesPage.RichEditViewer.Lines.Text := Notes
+    else
+      ReleaseNotesPage.RichEditViewer.Lines.Text := 'No release notes available.';
+  except
+    ReleaseNotesPage.RichEditViewer.Lines.Text := 'No release notes available.';
+  end;
+end;
+
 function IsUpgradeInstall(InstallDir: string): Boolean;
 begin
   Result :=
     FileExists(InstallDir + '\ADB-Media-Manager.exe') and
-    FileExists(InstallDir + '\version.json') and
-    FileExists(InstallDir + '\.install_marker');
+    FileExists(InstallDir + '\_internal\version.json') and
+    FileExists(InstallDir + '\_internal\.install_marker');
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;

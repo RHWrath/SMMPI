@@ -6,6 +6,7 @@ import sys
 import os
 import numpy as np
 from queue import Queue, Empty
+from utils import get_scrcpy_server_path, get_adb_path
 
 try:
     import cv2
@@ -20,15 +21,6 @@ except ImportError:
     sys.exit(1)
 
 
-def get_resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    
-    return os.path.join(base_path, relative_path)
 
 
 class ScrcpyStream:
@@ -36,7 +28,7 @@ class ScrcpyStream:
         self.port = port
         self.max_size = max_size
         self.max_fps = max_fps
-        self.scrcpy_server = get_resource_path("scrcpy-server-v3.3.4")
+        self.scrcpy_server = get_scrcpy_server_path()
         self.remote_path = "/data/local/tmp/scrcpy-server-v3.3.4"
         self.width = None
         self.height = None
@@ -59,8 +51,13 @@ class ScrcpyStream:
 
     def get_device_screen_size(self):
         try:
+            adb_path = get_adb_path()
+            if not adb_path:
+                print("[-] ADB path could not be resolved")
+                return
+
             result = subprocess.run(
-                ['adb', 'shell', 'wm', 'size'],
+                [adb_path, 'shell', 'wm', 'size'],
                 capture_output=True,
                 text=True
             )
@@ -93,8 +90,14 @@ class ScrcpyStream:
     def get_touch_device(self):
         """Find the touch input device on the Android device."""
         try:
+            adb_path = get_adb_path()
+            if not adb_path:
+                print("[-] ADB path could not be resolved")
+                self.touch_device = '/dev/input/event1'
+                return
+
             result = subprocess.run(
-                ['adb', 'shell', 'getevent', '-pl'],
+                [adb_path, 'shell', 'getevent', '-pl'],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -138,14 +141,25 @@ class ScrcpyStream:
         return device_x, device_y
 
     def setup_adb_reverse(self):
-        print("[*] Setting up adb reverse...")
+        adb_path = get_adb_path()
+        print(f"[*] Setting up adb reverse using: {adb_path}")
+
+        if not adb_path:
+            raise RuntimeError("ADB path could not be resolved")
+
         result = subprocess.run(
-            ['adb', 'reverse', 'localabstract:scrcpy', f'tcp:{self.port}'],
+            [adb_path, 'reverse', 'localabstract:scrcpy', f'tcp:{self.port}'],
             capture_output=True,
             text=True
         )
+
+        print(f"[DEBUG] adb reverse return code: {result.returncode}")
+        print(f"[DEBUG] adb reverse stdout: {result.stdout}")
+        print(f"[DEBUG] adb reverse stderr: {result.stderr}")
+
         if result.returncode != 0:
             raise RuntimeError(f"Failed to set up adb reverse: {result.stderr}")
+
         print("[+] ADB reverse configured")
 
     def start_listener(self):
@@ -157,20 +171,42 @@ class ScrcpyStream:
         print(f"[+] Listener started on 127.0.0.1:{self.port}")
 
     def push_and_run_scrcpy(self):
+        adb_path = get_adb_path()
+
+        print(f"[*] Using adb: {adb_path}")
+        print(f"[*] Using scrcpy server: {self.scrcpy_server}")
+
+        if not adb_path:
+            print("[-] ADB path could not be resolved")
+            return
+
+        if not self.scrcpy_server:
+            print("[-] scrcpy server path could not be resolved")
+            return
+
+        if not os.path.exists(self.scrcpy_server):
+            print(f"[-] scrcpy server file does not exist: {self.scrcpy_server}")
+            return
+
         print("[*] Pushing scrcpy server to device...")
         push_result = subprocess.run(
-            ['adb', 'push', self.scrcpy_server, '/data/local/tmp/'],
+            [adb_path, 'push', self.scrcpy_server, '/data/local/tmp/'],
             capture_output=True,
             text=True
         )
+
+        print(f"[DEBUG] push return code: {push_result.returncode}")
+        print(f"[DEBUG] push stdout: {push_result.stdout}")
+        print(f"[DEBUG] push stderr: {push_result.stderr}")
+
         if push_result.returncode != 0:
             print(f"[-] Failed to push scrcpy: {push_result.stderr}")
             return
 
         print("[+] Scrcpy server pushed, starting...")
-        
+
         cmd = [
-            'adb', 'shell',
+            adb_path, 'shell',
             f'CLASSPATH={self.remote_path}',
             'app_process', '/', 'com.genymobile.scrcpy.Server', '3.3.4',
             f'max_fps={self.max_fps}',
@@ -185,8 +221,12 @@ class ScrcpyStream:
             'display_id=0',
             'lock_video_orientation=0'
         ]
-        
-        subprocess.run(cmd, capture_output=True)
+
+        run_result = subprocess.run(cmd, capture_output=True, text=True)
+
+        print(f"[DEBUG] server start return code: {run_result.returncode}")
+        print(f"[DEBUG] server start stdout: {run_result.stdout}")
+        print(f"[DEBUG] server start stderr: {run_result.stderr}")
 
     def find_nal_units(self, data):
         nal_units = []
@@ -330,24 +370,37 @@ class ScrcpyStream:
 
     def send_touch_event(self, event_type, x, y):
         def send():
+            adb_path = get_adb_path()
+            if not adb_path:
+                print("[-] ADB path could not be resolved for touch event")
+                return
+
+            kwargs = {
+                "capture_output": True,
+                "text": True
+            }
+
+            if sys.platform == "win32":
+                kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
             if event_type == 'down':
                 subprocess.run(
-                    ['adb', 'shell', 'input', 'motionevent', 'DOWN', str(x), str(y)],
-                    capture_output=True
+                    [adb_path, 'shell', 'input', 'motionevent', 'DOWN', str(x), str(y)],
+                    **kwargs
                 )
             elif event_type == 'up':
                 subprocess.run(
-                    ['adb', 'shell', 'input', 'motionevent', 'UP', str(x), str(y)],
-                    capture_output=True
+                    [adb_path, 'shell', 'input', 'motionevent', 'UP', str(x), str(y)],
+                    **kwargs
                 )
             elif event_type == 'move':
                 subprocess.run(
-                    ['adb', 'shell', 'input', 'motionevent', 'MOVE', str(x), str(y)],
-                    capture_output=True
+                    [adb_path, 'shell', 'input', 'motionevent', 'MOVE', str(x), str(y)],
+                    **kwargs
                 )
-        
-        threading.Thread(target=send, daemon=True).start()
 
+        threading.Thread(target=send, daemon=True).start()
+    
     def display_frames(self):
         print("[*] Waiting for first frame...")
         timeout = time.time() + 15
@@ -456,28 +509,29 @@ class ScrcpyStream:
     def cleanup(self):
         self.running = False
         print("[*] Cleaning up...")
-        
+
         cv2.destroyAllWindows()
-        
+
         if self.conn:
             try:
                 self.conn.close()
             except:
                 pass
-        
+
         if self.server_socket:
             try:
                 self.server_socket.close()
             except:
                 pass
-        
-        subprocess.run(
-            ['adb', 'reverse', '--remove', 'localabstract:scrcpy'],
-            capture_output=True
-        )
-        
-        print("[+] Cleanup complete")
 
+        adb_path = get_adb_path()
+        if adb_path:
+            subprocess.run(
+                [adb_path, 'reverse', '--remove', 'localabstract:scrcpy'],
+                capture_output=True
+            )
+
+        print("[+] Cleanup complete")
 
 def main():
     print("=" * 50)
