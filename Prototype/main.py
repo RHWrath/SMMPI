@@ -253,3 +253,4 @@ class MediaDisplayApp:
 if __name__ == "__main__":
     app = MediaDisplayApp()
     app.run()
+    
