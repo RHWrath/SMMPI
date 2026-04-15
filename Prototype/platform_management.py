@@ -1,7 +1,7 @@
 import json
 import os
 import subprocess
-from utils import get_platforms_file, get_adb_path, debug_log
+from utils import get_platforms_file, get_adb_path
 
 def load_platforms() -> list[dict]:
     """Load all platform configs from platforms.json."""

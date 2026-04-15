@@ -4,36 +4,44 @@
       "name": "Snapchat",
       "package_name": "com.snapchat.android",
       "remote_folder": "/storage/emulated/0/Android/data/com.snapchat.android/files/Camera1/",
+      "photo_mode": "vcam",
+      "gallery_path": null,
       "photo": {
         "width": 1080,
         "height": 1920,
-        "rotate": -90,
-        "mirror": true
+        "rotate": 90,
+        "mirror": false,
+        "filename": "1000.bmp"
       },
       "video": {
         "width": 1080,
         "height": 1920,
-        "rotate": -90,
-        "mirror": true,
-        "max_duration": 60
+        "rotate": 180,
+        "mirror": false,
+        "max_duration": 60,
+        "filename": "virtual.mp4"
       }
     },
     {
       "name": "WhatsApp",
       "package_name": "com.whatsapp",
       "remote_folder": "/storage/emulated/0/Android/data/com.whatsapp/files/Camera1/",
+      "photo_mode": "gallery",
+      "gallery_path": "/storage/emulated/0/DCIM/Camera/",
       "photo": {
         "width": 3840,
         "height": 2160,
         "rotate": null,
-        "mirror": null
+        "mirror": null,
+        "filename": "virtual_photo.jpg"
       },
       "video": {
         "width": 3840,
         "height": 2160,
         "rotate": null,
         "mirror": null,
-        "max_duration": 60
+        "max_duration": 60,
+        "filename": "virtual.mp4"
       }
     }
   ]
