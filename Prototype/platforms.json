@@ -11,6 +11,7 @@
         "height": 1920,
         "rotate": 90,
         "mirror": false,
+        "resize_mode": "fill",
         "filename": "1000.bmp"
       },
       "video": {
@@ -18,6 +19,7 @@
         "height": 1920,
         "rotate": 180,
         "mirror": false,
+        "resize_mode": "fill",
         "max_duration": 60,
         "filename": "virtual.mp4"
       }
@@ -29,17 +31,19 @@
       "photo_mode": "gallery",
       "gallery_path": "/storage/emulated/0/DCIM/Camera/",
       "photo": {
-        "width": 3840,
-        "height": 2160,
+        "width": 4032,
+        "height": 3024,
         "rotate": null,
         "mirror": null,
+        "resize_mode": "contain",
         "filename": "virtual_photo.jpg"
       },
       "video": {
-        "width": 3840,
-        "height": 2160,
+        "width": 1920,
+        "height": 1080,
         "rotate": null,
         "mirror": null,
+        "resize_mode": "contain",
         "max_duration": 60,
         "filename": "virtual.mp4"
       }
