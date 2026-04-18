@@ -21,15 +21,14 @@ The underlying goal is to collect as much relevant information as possible with 
 
 ### C1 Context Diagram
 
-![Context Diagram](./img/c1.png)
+![Context Diagram](./WPFTest/img/c1.png)
 
 ### C2 Container Diagram
 
-![Container Diagram](./img/c2.png)
-
+![Container Diagram](./WPFTest/img/c2.png)
 ### C3 Component Diagram
 
-![Component Diagram](./img/c3.png)
+![Component Diagram](./WPFTest/img/c3.png)
 
 
 ## Installation
