@@ -33,4 +33,4 @@ The underlying goal is to collect as much relevant information as possible with 
 
 ## Installation
 
-Installation instructions can be found in the [Installation Guide](./Installation.md).
+Installation instructions can be found in the [Installation Guide](./WPFTest/Installation.md).
