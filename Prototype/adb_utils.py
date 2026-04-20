@@ -13,8 +13,14 @@ def _adb_kwargs():
 def force_stop(package_name: str) -> None:
     """Force stop an app without relaunching it."""
     print(f"[+] Force stopping {package_name}...")
+    
+    adb_path = get_adb_path()
+    if not adb_path:    
+        print("[DEBUG] ADB not found for platform detection")
+        return None
+    
     subprocess.run(
-        ['adb', 'shell', 'am', 'force-stop', package_name],
+        [adb_path, 'shell', 'am', 'force-stop', package_name],
         **_adb_kwargs()
     )
     print(f"[+] {package_name} stopped")
