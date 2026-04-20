@@ -16,6 +16,7 @@ from image_to_video import on_image_confirm
 from video import on_video_confirm
 from platform_management import get_active_platform
 from recording_manager import RecordingManager
+from case_manager import CaseManager
 
 
 class MediaDisplayApp:
@@ -45,6 +46,9 @@ class MediaDisplayApp:
         self._monitor_after_id = None
         self._is_reconnecting = False
 
+        # Session state (set during login flow)
+        self.session = None
+
         self.setup_ui()
         self.app.withdraw()
         
@@ -59,7 +63,8 @@ class MediaDisplayApp:
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
 
-        (self.right_panel, self.video_canvas, self.right_status_label, self.close_app_button) = UISetup.setup_right_panel(main_frame)
+        (self.right_panel, self.video_canvas, self.right_status_label,
+         self.close_app_button) = UISetup.setup_right_panel(main_frame)
 
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
@@ -120,6 +125,21 @@ class MediaDisplayApp:
                 text_color="green" if self.selected_device else "red"
             )
             self.device_status_label.pack(pady=5)
+
+    def add_session_status(self):
+        """Add session info label to the UI after login."""
+        if not self.session:
+            return
+
+        session_text = f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
+
+        self.session_status_label = ctk.CTkLabel(
+            self.right_panel,
+            text=session_text,
+            font=("Arial", 11),
+            text_color="#4A9EFF"
+        )
+        self.session_status_label.pack(pady=(0, 5))
 
     def _start_connection_monitor(self):
         """Start polling the device connection every 3 seconds."""
@@ -188,7 +208,7 @@ class MediaDisplayApp:
         self.device_manager.available_devices = []
 
         self.device_manager.show_device_selection()
-        
+
     def add_platform_status(self):
         self.platform_status_label = ctk.CTkLabel(
             self.right_panel,
@@ -196,8 +216,8 @@ class MediaDisplayApp:
             font=("Arial", 10),
             text_color="gray"
         )
-        self.platform_status_label.pack(pady=(0, 5))    
-        
+        self.platform_status_label.pack(pady=(0, 5))
+
     def update_platform_status(self, platform):
         if not hasattr(self, "platform_status_label") or not self.platform_status_label.winfo_exists():
             self.add_platform_status()
@@ -364,11 +384,38 @@ class MediaDisplayApp:
             self._stop_connection_monitor()
             if self.stream:
                 self.stream.stop()
+
+            # Log where evidence would be saved
+            if self.session:
+                print(f"[+] Session ended. Evidence path: {self.session.get_evidence_path()}")
+
             stop_adb_server()
             self.app.destroy()
 
         self.app.protocol("WM_DELETE_WINDOW", on_close)
-        self.app.after(0, self.device_manager.show_device_selection)
+
+        def startup_flow():
+            # Step 1: Login + case selection
+            case_manager = CaseManager(self.app)
+            self.session = case_manager.run_login_flow()
+
+            if not self.session:
+                print("[!] Login cancelled, exiting")
+                self.app.quit()
+                return
+
+            # Show session info in the UI
+            self.add_session_status()
+
+            # Update window title with session info
+            self.app.title(
+                f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}"
+            )
+
+            # Step 2: Device selection (existing flow)
+            self.device_manager.show_device_selection()
+
+        self.app.after(0, startup_flow)
         self.app.mainloop()
 
     def get_widget_screen_geometry(self, widget):
