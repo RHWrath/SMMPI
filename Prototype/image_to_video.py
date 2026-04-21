@@ -252,9 +252,13 @@ def push_image_to_gallery(app_instance, platform_config):
 
     # Trigger media scan so the image shows up in gallery/picker
     trigger_media_scan(app_instance.selected_device, remote_path)
+    from platform_management import get_active_platform
+
+    platform_config = get_active_platform()
+    platform_name = platform_config["name"]
 
     app_instance.info_label.configure(
-        text=f"Image pushed to gallery. Use WhatsApp attach > Gallery to send it."
+        text=f"Image pushed to gallery. Use {platform_name} attach > Gallery to send it."
     )
     show_toast(app_instance.app, "Image sent successfully")
 
