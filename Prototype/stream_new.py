@@ -187,7 +187,7 @@ class ScrcpyStream:
             f'max_size={self.max_size}',
             'video_codec=h264',
             'display_id=0',
-            'lock_video_orientation=0'
+            #'lock_video_orientation=0'
         ]
 
         run_result = subprocess.run(cmd, capture_output=True, text=True)

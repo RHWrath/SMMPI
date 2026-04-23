@@ -119,38 +119,50 @@ class ScrcpyCanvasWrapper:
             return
 
         try:
+            if not self.canvas.winfo_exists():
+                return
+
             with self.frame_lock:
                 frame = self.current_frame
 
-            if frame is not None:
-                import cv2
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                image = Image.fromarray(frame_rgb)
+            if frame is None:
+                if self.running:
+                    self._display_after_id = self.canvas.after(33, self._update_canvas)
+                return
 
-                cw = max(self.canvas.winfo_width(), 1)
-                ch = max(self.canvas.winfo_height(), 1)
+            import cv2
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image = Image.fromarray(frame_rgb)
 
-                img_w, img_h = image.size
-                scale = min(cw / img_w, ch / img_h)
-                new_w, new_h = int(img_w * scale), int(img_h * scale)
+            cw = max(self.canvas.winfo_width(), 1)
+            ch = max(self.canvas.winfo_height(), 1)
 
-                resized = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
-                photo = ImageTk.PhotoImage(resized)
+            img_w, img_h = image.size
+            if img_w <= 0 or img_h <= 0:
+                if self.running:
+                    self._display_after_id = self.canvas.after(33, self._update_canvas)
+                return
 
-                cx, cy = cw // 2, ch // 2
-                if not hasattr(self, '_image_id'):
-                    self._image_id = self.canvas.create_image(cx, cy, image=photo)
-                else:
-                    self.canvas.coords(self._image_id, cx, cy)
-                    self.canvas.itemconfig(self._image_id, image=photo)
+            scale = min(cw / img_w, ch / img_h)
+            new_w = max(int(img_w * scale), 1)
+            new_h = max(int(img_h * scale), 1)
 
-                self.canvas.image = photo
+            resized = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
+            photo = ImageTk.PhotoImage(resized)
+
+            cx, cy = cw // 2, ch // 2
+            if not hasattr(self, '_image_id'):
+                self._image_id = self.canvas.create_image(cx, cy, image=photo)
+            else:
+                self.canvas.coords(self._image_id, cx, cy)
+                self.canvas.itemconfig(self._image_id, image=photo)
+
+            self.canvas.image = photo
 
         except Exception as e:
-            if "cv2" not in str(e):
-                print(f"[!] Canvas update error: {e}")
+            print(f"[!] Canvas update error: {e}")
 
-        if self.running:
+        if self.running and self.canvas.winfo_exists():
             self._display_after_id = self.canvas.after(33, self._update_canvas)
 
     def _canvas_to_device_coords(self, cx, cy):
@@ -242,6 +254,14 @@ class ScrcpyCanvasWrapper:
 
     def stop(self):
         self.running = False
+        
+        if hasattr(self, "_display_after_id") and self._display_after_id:
+            try:
+                self.canvas.after_cancel(self._display_after_id)
+            except Exception:
+                pass
+            self._display_after_id = None    
+
         if self.stream:
             self.stream.running = False
             self.stream = None

@@ -99,20 +99,46 @@ class UISetup:
     def setup_right_panel(parent):
         right_panel = ctk.CTkFrame(parent)
         right_panel.grid(row=0, column=2, sticky="nsew", padx=(5, 0))
+        
+        header_frame = ctk.CTkFrame(right_panel, fg_color="transparent")
+        header_frame.pack(fill="x", padx=10, pady=(10,5))
 
         title_label = ctk.CTkLabel(
-            right_panel,
+            header_frame,
             text="Device Screen",
             font=("Arial", 14, "bold")
         )
         title_label.pack(pady=(10, 5))
+        
+        recording_timer_label = ctk.CTkLabel(
+            header_frame,
+            text="00:00:00",
+            font=("Arial", 13, "bold"),
+            text_color="gray60"
+        )
+        recording_timer_label.pack(side="right")
+
+        video_container = ctk.CTkFrame(
+            right_panel,
+            fg_color="transparent",
+            corner_radius=0
+        )
+        video_container.pack(pady=5, fill="both", expand=True)
+
+        video_border_frame = ctk.CTkFrame(
+            video_container,
+            fg_color="black",
+            corner_radius=0
+        )
+        video_border_frame.pack(fill="both", expand=True)
 
         video_canvas = Canvas(
-            right_panel,
+            video_border_frame,
             bg="black",
-            highlightthickness=0
+            highlightthickness=0,
+            bd=0
         )
-        video_canvas.pack(pady=5, fill="both", expand=True)
+        video_canvas.pack(padx=2, pady=2, fill="both", expand=True)
 
         status_label = ctk.CTkLabel(
             right_panel,
@@ -142,4 +168,4 @@ class UISetup:
         )
         record_button.pack(pady=(0, 5))
 
-        return right_panel, video_canvas, status_label, close_app_button, record_button
+        return right_panel, video_border_frame, video_canvas, status_label, close_app_button, record_button, recording_timer_label
