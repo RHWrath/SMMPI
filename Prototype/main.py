@@ -48,13 +48,18 @@ class MediaDisplayApp:
 
         # Session state (set during login flow)
         self.session = None
-
         self.setup_ui()
         self.app.withdraw()
         
         # Recording 
         self.recording_manager = RecordingManager()
-
+        self._recording_resize_after_id = None
+        self.app.bind("<Configure>", self.on_window_configure)
+        self._last_sent_crop = None 
+        self._recording_start_time = None
+        self._recording_timer_after_id = None
+       
+        
     def setup_ui(self):
         main_frame = UISetup.create_main_frame(self.app)
 
@@ -62,9 +67,15 @@ class MediaDisplayApp:
             UISetup.setup_left_panel(main_frame, self.on_folder_select)
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
+        
+        self.middle_panel.configure(width=360, height=460)
+        self.middle_panel.pack_propagate(False) if hasattr(self.middle_panel, "pack_propagate") else None
+        self.middle_panel.grid_propagate(False)
 
-        (self.right_panel, self.video_canvas, self.right_status_label,
-         self.close_app_button) = UISetup.setup_right_panel(main_frame)
+        (self.right_panel, self.video_border_frame, self.video_canvas, self.right_status_label,
+         self.close_app_button, self.record_button, self.recording_timer_label) = UISetup.setup_right_panel(main_frame)
+
+        self.record_button.configure(command=self.toggle_recording)
 
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
@@ -389,6 +400,12 @@ class MediaDisplayApp:
             if self.session:
                 print(f"[+] Session ended. Evidence path: {self.session.get_evidence_path()}")
 
+            if self.recording_manager.is_recording():
+                try:
+                    self.recording_manager.stop_recording()
+                except Exception as e:
+                    print(f"[ERROR] Failed to stop recording on close: {e}")
+
             stop_adb_server()
             self.app.destroy()
 
@@ -418,11 +435,12 @@ class MediaDisplayApp:
         self.app.after(0, startup_flow)
         self.app.mainloop()
 
-    def get_widget_screen_geometry(self, widget):
+    def get_widget_relative_geometry(self, widget):
         widget.update_idletasks()
-        
-        x = widget.winfo_rootx()
-        y = widget.winfo_rooty()
+        self.app.update_idletasks()
+
+        x = widget.winfo_rootx() - self.app.winfo_rootx()
+        y = widget.winfo_rooty() - self.app.winfo_rooty()
         width = widget.winfo_width()
         height = widget.winfo_height()
         
@@ -430,44 +448,125 @@ class MediaDisplayApp:
     
     
     def toggle_recording(self):
+        # Stop Recoring Logic
         try:
             if self.recording_manager.is_recording():
                 self.recording_manager.stop_recording()
                 self.record_button.configure(text="Start Recording")
                 self.info_label.configure(text="Recording stopped")
+                self._last_sent_crop = None
+                
+                
+                self.video_border_frame.configure(fg_color="black")             
+                
+                if self._recording_timer_after_id is not None:
+                    try:
+                        self.app.after_cancel(self._recording_timer_after_id)
+                    except Exception:
+                        pass
+                    self._recording_timer_after_id = None
+
+                self._recording_start_time = None
+                self.recording_timer_label.configure(text="00:00:00", text_color="gray60")
                 return
                 
-            if not self.selected_folder_path:
-                self.info_label.configure(text="Select a folder before recording")
+            if not self.session:
+                self.info_label.configure(text="No active case session.")
                 return
             
             platform_name = "UnknownPlatform"
             if hasattr(self, "active_platform") and self.active_platform:
                 platform_name = self.active_platform["name"]
                 
-            x, y, w, h = self.get_widget_screen_geometry(self.video_canvas)
-            
-            print(f"[DEBUG] Recording geometry: x={x}, y={y}, w={w}, h={h}")
+            x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
+            self._last_sent_crop = (x, y, w, h)
+            print(f"[DEBUG] Relative canvas geometry: x={x}, y={y}, w={w}, h={h}")
+            print(f"[DEBUG] App root: x={self.app.winfo_rootx()}, y={self.app.winfo_rooty()}")
+            print(f"[DEBUG] Canvas root: x={self.video_canvas.winfo_rootx()}, y={self.video_canvas.winfo_rooty()}")
             
             self.recording_manager.create_session(
-                case_folder=self.selected_folder_path,
+                case_folder=self.session.case_path,
                 platform_name=platform_name,
                 capture_x=x,
                 capture_y=y,
                 capture_width=w,
                 capture_height=h,
+                window_title=self.app.title(),
                 audio_device=None
             )    
-            
+            # Start recording Logic
             self.recording_manager.start_recording()
             self.record_button.configure(text="Stop Recording")
             self.info_label.configure(text="Recording started") 
+            
+            # Add red border to video canvas to indicate recording
+            self.video_border_frame.configure(fg_color="red")   
+            
+            # Start recording timer
+            self._recording_start_time = time.time()
+            self.recording_timer_label.configure(text="00:00:00", text_color="red")
+            self._update_recording_timer()
             
         except Exception as e:
                     self.info_label.configure(text=f"Recording error: {str(e)}")
                     print(f"[ERROR] toggle_recording: {e}")
                     
+    def on_window_configure(self, event):
+        if not self.recording_manager.is_recording():
+            return
+        if event.widget != self.app:
+            return
+        if self._recording_resize_after_id is not None:
+            try:
+                self.app.after_cancel(self._recording_resize_after_id)
+            except Exception:
+                pass
+
+        self._recording_resize_after_id = self.app.after(350, self._refresh_recording_crop)
+
+    def _refresh_recording_crop(self):
+        self._recording_resize_after_id = None
+        
+        if not self.recording_manager.is_recording():
+            return
+        
+        try: 
+            self.app.update_idletasks()
+            x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
             
+            if w < 50 or h < 50:
+                return
+
+            new_crop = (x, y, w, h)
+            
+            if self._last_sent_crop == new_crop:
+                return
+            
+            print(f"[DEBUG] Auto crop refresh: x={x}, y={y}, w={w}, h={h}")
+            
+            self.recording_manager.update_crop(x, y, w, h)
+            self._last_sent_crop = new_crop        
+        
+        except Exception as e:
+            print(f"[ERROR] Failed to refresh recording crop: {e}")
+            
+    def _update_recording_timer(self):
+        if not self.recording_manager.is_recording():
+            print(f"[DEBUG] Not updating timer - recording not active {self.recording_manager.is_recording()}")
+            return
+        
+        elapsed = int(time.time() - self._recording_start_time)
+        
+        hours = elapsed // 3600
+        minutes = (elapsed % 3600) // 60 
+        seconds = elapsed % 60
+
+        self.recording_timer_label.configure( 
+            text=f"● {hours:02d}:{minutes:02d}:{seconds:02d}",
+            text_color="red"
+            )
+     
+        self._recording_timer_after_id = self.app.after(1000, self._update_recording_timer)
             
 
 if __name__ == "__main__":
