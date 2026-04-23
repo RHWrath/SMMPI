@@ -1,15 +1,41 @@
 import os
+import re
 from datetime import datetime
+
+
+# Characters Windows forbids in filenames, plus control chars.
+_UNSAFE_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+# Valid case numbers: letters, digits, hyphens, underscores only.
+_VALID_CASE_NUMBER = re.compile(r'^[A-Za-z0-9_-]+$')
 
 
 class Session:
     """Holds session state: officer name, active case, and paths."""
 
     def __init__(self, officer_name, case_number, case_root):
-        self.officer_name = officer_name
-        self.case_number = case_number
+        # Officer name: must be non-blank, unsafe chars stripped.
+        if officer_name is None or officer_name.strip() == "":
+            raise ValueError("officer_name cannot be blank")
+        sanitised_name = _UNSAFE_FILENAME_CHARS.sub("", officer_name).strip()
+        if sanitised_name == "":
+            # All chars were unsafe — nothing usable left.
+            raise ValueError("officer_name contains no usable characters")
+
+        # Case number: must be non-blank and match the allowed charset.
+        if case_number is None or case_number.strip() == "":
+            raise ValueError("case_number cannot be blank")
+        trimmed_case = case_number.strip()
+        if not _VALID_CASE_NUMBER.match(trimmed_case):
+            raise ValueError(
+                f"case_number '{case_number}' contains invalid characters "
+                "(allowed: letters, digits, hyphens, underscores)"
+            )
+
+        self.officer_name = sanitised_name
+        self.case_number = trimmed_case
         self.case_root = case_root
-        self.case_path = os.path.join(case_root, case_number)
+        self.case_path = os.path.join(case_root, trimmed_case)
         self.started_at = datetime.now()
 
     def get_evidence_filename(self, extension=".mp4"):
