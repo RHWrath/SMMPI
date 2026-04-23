@@ -15,6 +15,7 @@ from stream_wrapper import ScrcpyCanvasWrapper
 from image_to_video import on_image_confirm
 from video import on_video_confirm
 from platform_management import get_active_platform
+from recording_manager import RecordingManager
 from case_manager import CaseManager
 
 
@@ -50,6 +51,9 @@ class MediaDisplayApp:
 
         self.setup_ui()
         self.app.withdraw()
+        
+        # Recording 
+        self.recording_manager = RecordingManager()
 
     def setup_ui(self):
         main_frame = UISetup.create_main_frame(self.app)
@@ -85,7 +89,7 @@ class MediaDisplayApp:
                 self.video_canvas,
                 port=27183,
                 max_size=1080,
-                max_fps=24
+                max_fps=60
             )
             self.stream.start()
             print("[+] Stream started in canvas")
@@ -414,7 +418,59 @@ class MediaDisplayApp:
         self.app.after(0, startup_flow)
         self.app.mainloop()
 
+    def get_widget_screen_geometry(self, widget):
+        widget.update_idletasks()
+        
+        x = widget.winfo_rootx()
+        y = widget.winfo_rooty()
+        width = widget.winfo_width()
+        height = widget.winfo_height()
+        
+        return (x, y, width, height)
+    
+    
+    def toggle_recording(self):
+        try:
+            if self.recording_manager.is_recording():
+                self.recording_manager.stop_recording()
+                self.record_button.configure(text="Start Recording")
+                self.info_label.configure(text="Recording stopped")
+                return
+                
+            if not self.selected_folder_path:
+                self.info_label.configure(text="Select a folder before recording")
+                return
+            
+            platform_name = "UnknownPlatform"
+            if hasattr(self, "active_platform") and self.active_platform:
+                platform_name = self.active_platform["name"]
+                
+            x, y, w, h = self.get_widget_screen_geometry(self.video_canvas)
+            
+            print(f"[DEBUG] Recording geometry: x={x}, y={y}, w={w}, h={h}")
+            
+            self.recording_manager.create_session(
+                case_folder=self.selected_folder_path,
+                platform_name=platform_name,
+                capture_x=x,
+                capture_y=y,
+                capture_width=w,
+                capture_height=h,
+                audio_device=None
+            )    
+            
+            self.recording_manager.start_recording()
+            self.record_button.configure(text="Stop Recording")
+            self.info_label.configure(text="Recording started") 
+            
+        except Exception as e:
+                    self.info_label.configure(text=f"Recording error: {str(e)}")
+                    print(f"[ERROR] toggle_recording: {e}")
+                    
+            
+            
 
 if __name__ == "__main__":
     app = MediaDisplayApp()
     app.run()
+    

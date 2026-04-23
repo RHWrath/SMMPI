@@ -131,5 +131,15 @@ class UISetup:
             state="disabled",
         )
         close_app_button.pack(pady=(0, 5))
+        
+        record_button = ctk.CTkButton(
+            right_panel,
+            text="Start Recording",
+            corner_radius=32,
+            font=("Arial", 12),
+            fg_color="#1f6aa5",
+            hover_color="#144870",
+        )
+        record_button.pack(pady=(0, 5))
 
-        return right_panel, video_canvas, status_label, close_app_button
+        return right_panel, video_canvas, status_label, close_app_button, record_button
