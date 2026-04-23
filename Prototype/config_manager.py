@@ -5,14 +5,9 @@ import sys
 
 def get_config_path():
     """Get the path to config.json, next to the executable or script."""
-    try:
-        # PyInstaller bundled
+    if getattr(sys, "frozen", False):
         base_path = os.path.dirname(sys.executable)
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    # In dev mode, use the script directory
-    if not getattr(sys, 'frozen', False):
+    else:
         base_path = os.path.dirname(os.path.abspath(__file__))
 
     return os.path.join(base_path, "config.json")
@@ -43,11 +38,16 @@ def load_config():
 
 
 def save_config(config):
-    """Save config dict to config.json."""
+    """
+    Save config dict to config.json.
+    Returns True if the write succeeded, False otherwise.
+    """
     config_path = get_config_path()
     try:
         with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
         print(f"[+] Config saved to {config_path}")
+        return True
     except Exception as e:
         print(f"[!] Failed to save config: {e}")
+        return False

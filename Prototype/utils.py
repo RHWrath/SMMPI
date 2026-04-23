@@ -44,13 +44,12 @@ def get_adb_path():
 
 
 def get_scrcpy_server_path():
-    """Resolve scrcpy from bundled locations first, then PATH."""
+    """Resolve scrcpy from bundled locations."""
     base_path = get_base_path()
 
     candidates = [
-        os.path.join(base_path,  "scrcpy-server-v3.3.4"),
+        os.path.join(base_path, "scrcpy-server-v3.3.4"),
         os.path.join(base_path, "_internal", "scrcpy-server-v3.3.4"),
-        shutil.which("scrcpy-server-v3.3.4"), 
     ]
 
     for path in candidates:
@@ -64,8 +63,8 @@ def get_ffmpeg_path():
     base_path = get_base_path()
 
     candidates = [
-        os.path.join(base_path, "ffmpeg" , "ffmpeg.exe"),
-        os.path.join(base_path, "_internal", "ffmpeg",  "ffmpeg.exe"),
+        os.path.join(base_path, "ffmpeg", "ffmpeg.exe"),
+        os.path.join(base_path, "_internal", "ffmpeg", "ffmpeg.exe"),
         shutil.which("ffmpeg"),
     ]
 
@@ -81,8 +80,8 @@ def get_ffprobe_path():
     base_path = get_base_path()
 
     candidates = [
-        os.path.join(base_path, "ffmpeg" , "ffprobe.exe"),
-        os.path.join(base_path, "_internal", "ffmpeg",  "ffprobe.exe"),
+        os.path.join(base_path, "ffmpeg", "ffprobe.exe"),
+        os.path.join(base_path, "_internal", "ffmpeg", "ffprobe.exe"),
         shutil.which("ffprobe"),
     ]
 

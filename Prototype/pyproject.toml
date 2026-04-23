@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Add the project root to sys.path so tests can `import platform_management` etc.
+# without needing an __init__.py or install step.
+pythonpath = ["."]
+addopts = [
+    "-v",
+    "--strict-markers",
+]

@@ -1,8 +1,14 @@
 import customtkinter as ctk
 import os
+import re
 
 from config_manager import load_config, save_config
 from session import Session
+
+
+# Matches Session's case_number allowlist so GUI input fails fast with a
+# helpful message instead of letting Session.__init__ raise deeper in the flow.
+_VALID_CASE_NUMBER = re.compile(r'^[A-Za-z0-9_-]+$')
 
 
 class CaseManager:
@@ -19,7 +25,7 @@ class CaseManager:
     def run_login_flow(self):
         """
         Show login screen, then case selection screen.
-        Returns a Session object or None if cancelled.
+        Returns a Session object or None if cancelled or construction fails.
         """
         self._show_login_screen()
 
@@ -31,12 +37,20 @@ class CaseManager:
         if not self._case_number:
             return None
 
-        # Build session and ensure the case folder exists
-        self.session = Session(
-            officer_name=self._officer_name,
-            case_number=self._case_number,
-            case_root=self.config["case_root"]
-        )
+        # Build session and ensure the case folder exists.
+        # GUI validation should catch bad input before we get here, but the
+        # try/except guards against edge cases (programmatic calls, unicode
+        # corner cases) so the app doesn't crash on a rogue input.
+        try:
+            self.session = Session(
+                officer_name=self._officer_name,
+                case_number=self._case_number,
+                case_root=self.config["case_root"]
+            )
+        except ValueError as e:
+            print(f"[!] Could not start session: {e}")
+            return None
+
         self.session.ensure_case_folder()
 
         print(f"[+] Session started: officer='{self.session.officer_name}', "
@@ -188,10 +202,17 @@ class CaseManager:
                 initialdir=self.config["case_root"]
             )
             if new_root:
+                previous_root = self.config["case_root"]
                 self.config["case_root"] = new_root
-                save_config(self.config)
-                root_path_label.configure(text=f"Case folder: {new_root}")
-                refresh_case_list()
+                if save_config(self.config):
+                    root_path_label.configure(text=f"Case folder: {new_root}")
+                    refresh_case_list()
+                else:
+                    # Roll back the in-memory value so we don't silently diverge from disk.
+                    self.config["case_root"] = previous_root
+                    error_label.configure(
+                        text="Could not save new case folder. Check folder permissions and try again."
+                    )
 
         change_root_button = ctk.CTkButton(
             root_frame,
@@ -222,9 +243,11 @@ class CaseManager:
             if not case_num:
                 error_label.configure(text="Please enter a case number")
                 return
-            # Basic filename safety check
-            if any(c in case_num for c in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']):
-                error_label.configure(text="Case number contains invalid characters")
+            # Allowlist check — matches Session's validation so construction won't fail.
+            if not _VALID_CASE_NUMBER.match(case_num):
+                error_label.configure(
+                    text="Case number may only contain letters, digits, hyphens, underscores"
+                )
                 return
             self._case_number = case_num
             case_window.destroy()
