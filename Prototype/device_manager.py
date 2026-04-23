@@ -78,10 +78,22 @@ class DeviceManager:
         )
         cancel_button.pack(side="left", padx=10)
 
+        device_window.protocol("WM_DELETE_WINDOW", self.cancel_device_selection)
+
         self.device_window = device_window
         self.refresh_device_list()
         device_window.wait_window()
 
+        no_device_selected = self.selected_device_index is None or not self.available_devices
+
+        if no_device_selected and self.is_initial_launch:
+            # First launch with no device: close the app cleanly
+            self.is_initial_launch = False
+            self.app.destroy()
+            return
+
+        # Either a device was selected, or this is a reconnect cancel —
+        # restore the main window either way
         try:
             self.app.attributes("-alpha", 1.0)
             self.app.deiconify()
@@ -90,12 +102,6 @@ class DeviceManager:
             self.app.focus_force()
         except Exception as e:
             print(f"Error showing main window after device selection: {e}")
-
-        # Only quit app on cancel if this is the first launch
-        # During reconnection, just leave the app running without a device
-        if self.selected_device_index is None or not self.available_devices:
-            if self.is_initial_launch:
-                self.app.quit()
 
         self.is_initial_launch = False
 

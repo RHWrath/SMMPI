@@ -397,7 +397,7 @@ class MediaDisplayApp:
 
             if not self.session:
                 print("[!] Login cancelled, exiting")
-                self.app.quit()
+                self.app.destroy()
                 return
 
             # Show session info in the UI
