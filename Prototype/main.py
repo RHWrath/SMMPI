@@ -474,9 +474,7 @@ class MediaDisplayApp:
                 self.info_label.configure(text="No active case session.")
                 return
             
-            platform_name = "UnknownPlatform"
-            if hasattr(self, "active_platform") and self.active_platform:
-                platform_name = self.active_platform["name"]
+            
                 
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
             self._last_sent_crop = (x, y, w, h)
@@ -486,7 +484,6 @@ class MediaDisplayApp:
             
             self.recording_manager.create_session(
                 case_folder=self.session.case_path,
-                platform_name=platform_name,
                 capture_x=x,
                 capture_y=y,
                 capture_width=w,
@@ -524,31 +521,6 @@ class MediaDisplayApp:
 
         self._recording_resize_after_id = self.app.after(350, self._refresh_recording_crop)
 
-    def _refresh_recording_crop(self):
-        self._recording_resize_after_id = None
-        
-        if not self.recording_manager.is_recording():
-            return
-        
-        try: 
-            self.app.update_idletasks()
-            x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
-            
-            if w < 50 or h < 50:
-                return
-
-            new_crop = (x, y, w, h)
-            
-            if self._last_sent_crop == new_crop:
-                return
-            
-            print(f"[DEBUG] Auto crop refresh: x={x}, y={y}, w={w}, h={h}")
-            
-            self.recording_manager.update_crop(x, y, w, h)
-            self._last_sent_crop = new_crop        
-        
-        except Exception as e:
-            print(f"[ERROR] Failed to refresh recording crop: {e}")
             
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
