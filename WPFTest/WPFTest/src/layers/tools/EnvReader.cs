@@ -3,7 +3,7 @@ namespace Layers.Tools
     using System;
     using System.IO;
 
-    class EnvReader
+    public class EnvReader
     {
         public static void Load(string filePath)
         {

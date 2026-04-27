@@ -13,4 +13,20 @@
     <PackageReference Include="OAuth2Bridge" Version="1.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="src\layers\**\*.cs" />
+    <EmbeddedResource Remove="src\layers\**\*" />
+    <None Remove="src\layers\**\*" />
+    <Page Remove="src\layers\**\*.xaml" />
+    <ApplicationDefinition Remove="src\layers\**\*.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WPFTest\src\layers\application\ui\UI.csproj" />
+    <ProjectReference Include="..\WPFTest\src\layers\business\infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\WPFTest\src\layers\business\logging\Logging.csproj" />
+    <ProjectReference Include="..\WPFTest\src\layers\business\plugins\Plugins.csproj" />
+    <ProjectReference Include="..\WPFTest\src\layers\persistence\Persistence.csproj" />
+    <ProjectReference Include="..\WPFTest\src\layers\tools\Tools.csproj" />
+  </ItemGroup>
 </Project>

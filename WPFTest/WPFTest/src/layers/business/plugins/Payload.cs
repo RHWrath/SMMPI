@@ -2,7 +2,7 @@
 
 namespace Layers.Business.Plugins
 {
-    class Payload
+    public class Payload
     {
         public string Recipient { get; set; }
         public string Message { get; set; }

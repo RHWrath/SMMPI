@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace Layers.Business.Plugins
 {
-    class DiscordPlugin : IPlatformPlugin
+    public class DiscordPlugin : IPlatformPlugin
     {
         public string PlatformName => "Discord";
 

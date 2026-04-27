@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <!-- <ItemGroup>
+    <Compile Include="EvidenceRepository.cs" />
+    <Compile Include="ReportService.cs" />
+  </ItemGroup> -->
+</Project>
