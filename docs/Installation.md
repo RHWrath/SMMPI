@@ -17,7 +17,7 @@ Create a `.env` file in the root directory of the project and add your API keys 
 KEY="VALUE"
 ```
 
-Keys can be fetched from the _static EnvReader class_ under *Layers/Tools*
+Keys can be fetched from the _static EnvReader class_ under *Core/SMMPI.Applications/*
 
 Platform specific API keys
 -----

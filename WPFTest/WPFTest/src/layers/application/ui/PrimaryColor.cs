@@ -1,4 +1,0 @@
-﻿namespace Layers.Application.UI
-{
-
-}
