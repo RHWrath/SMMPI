@@ -1,18 +1,11 @@
-﻿using Layers.Business.Logging;
-using Layers.Business.Plugins;
-using Layers.Tools;
+﻿using SMMPI.Application;
+using SMMPI.Domain.Entities;
+using SMMPI.Domain.Enums;
+using SMMPI.Infrastructure.Logging;
+using SMMPI.Infrastructure.Plugins.Discord;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace WPFTest
 {

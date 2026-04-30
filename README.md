@@ -21,16 +21,20 @@ The underlying goal is to collect as much relevant information as possible with 
 
 ### C1 Context Diagram
 
-![Context Diagram](./WPFTest/img/c1.png)
+![Context Diagram](docs/img/c1.png)
 
 ### C2 Container Diagram
 
-![Container Diagram](./WPFTest/img/c2.png)
+![Container Diagram](docs/img/c2.png)
 ### C3 Component Diagram
 
-![Component Diagram](./WPFTest/img/c3.png)
+![Component Diagram](docs/img/c3.png)
 
 
 ## Installation
 
-Installation instructions can be found in the [Installation Guide](./WPFTest/Installation.md).
+Installation instructions can be found in the [Installation Guide](./docs/Installation.md).
+
+## Project Architecture
+
+A detailed explanation of the project architecture, solution structure, layers, and project references can be found in the [Project Architecture](./docs/project-architecture.md).

@@ -1,7 +1,4 @@
-﻿#all documentation
-/Docs/
-
-# Build outputs (.NET / MSBuild) — any depth, incl. WPFTest/WPFTest/
+﻿# Build outputs (.NET / MSBuild) — any depth, incl. WPFTest/WPFTest/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
@@ -12,3 +9,10 @@
 *.user
 *.userosscache
 *.suo
+
+**/bin/
+**/obj/
+**/.vs/
+
+.idea
+.env
