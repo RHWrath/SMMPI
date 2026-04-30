@@ -20,7 +20,7 @@ namespace WPFTest
         static extern bool AllocConsole();
         public MainWindow()
         {
-            EnvReader.Load("../../../../.env");
+            EnvReader.Load("../../../../../../.env");
 
             InitializeComponent();
             AllocConsole();  // Call to open console

@@ -52,7 +52,7 @@ public class DiscordPlugin : IPlatformPlugin
         try
         {
             // Start the authentication process
-            var userInfo = await server.AuthenticateAsync(CancellationToken.None, @"../../../src/data/success.html");
+            var userInfo = await server.AuthenticateAsync(CancellationToken.None, @"../../../../../../success.html");
             Console.WriteLine(JsonConvert.SerializeObject(userInfo, Formatting.Indented));
         }
         catch (OAuthException ex)
