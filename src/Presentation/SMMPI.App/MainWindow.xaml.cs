@@ -3,6 +3,7 @@ using SMMPI.Domain.Entities;
 using SMMPI.Domain.Enums;
 using SMMPI.Infrastructure.Logging;
 using SMMPI.Infrastructure.Plugins.Discord;
+using SMMPI.Infrastructure.Plugins.Tools;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -20,7 +21,7 @@ namespace WPFTest
         static extern bool AllocConsole();
         public MainWindow()
         {
-            EnvReader.Load("../../../../../../.env");
+            EnvReader.Load(SolutionRoot.ToSolutionAbsolutePath(".env"));
 
             InitializeComponent();
             AllocConsole();  // Call to open console
@@ -58,6 +59,14 @@ namespace WPFTest
         {
             DiscordPlugin plugin = new DiscordPlugin();
             await plugin.Authenticate();
+        }
+
+        private void btnLoadPlugin_Click(object sender, RoutedEventArgs e)
+        {
+            SnapchatPlugin plugin = new SnapchatPlugin();
+
+            plugin.connect("device_id_123");
+
         }
     }
 }

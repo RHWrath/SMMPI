@@ -1,0 +1,76 @@
+﻿{
+  "platforms": [
+    {
+      "name": "Snapchat",
+      "package_name": "com.snapchat.android",
+      "remote_folder": "/storage/emulated/0/Android/data/com.snapchat.android/files/Camera1/",
+      "photo_mode": "vcam",
+      "gallery_path": null,
+      "photo": {
+        "width": 1080,
+        "height": 1920,
+        "rotate": 90,
+        "mirror": false,
+        "resize_mode": "fill",
+        "filename": "1000.bmp"
+      },
+      "video": {
+        "width": 1080,
+        "height": 1920,
+        "rotate": 180,
+        "mirror": false,
+        "resize_mode": "fill",
+        "max_duration": 60,
+        "filename": "virtual.mp4"
+      }
+    },
+    {
+      "name": "WhatsApp",
+      "package_name": "com.whatsapp",
+      "remote_folder": "/storage/emulated/0/Android/data/com.whatsapp/files/Camera1/",
+      "photo_mode": "gallery",
+      "gallery_path": "/storage/emulated/0/DCIM/Camera/",
+      "photo": {
+        "width": 4032,
+        "height": 3024,
+        "rotate": null,
+        "mirror": null,
+        "resize_mode": "contain",
+        "filename": "virtual_photo.jpg"
+      },
+      "video": {
+        "width": 1920,
+        "height": 1080,
+        "rotate": null,
+        "mirror": null,
+        "resize_mode": "contain",
+        "max_duration": 60,
+        "filename": "virtual.mp4"
+      }
+    },
+    {
+      "name": "Discord",
+      "package_name": "com.discord",
+      "remote_folder": "/storage/emulated/0/Android/data/com.discord/files/Camera1/",
+      "photo_mode": "gallery",
+      "gallery_path": "/storage/emulated/0/DCIM/Camera/",
+      "photo": {
+        "width": 4032,
+        "height": 3024,
+        "rotate": null,
+        "mirror": null,
+        "resize_mode": "contain",
+        "filename": "virtual_photo.jpg"
+      },
+      "video": {
+        "width": 1920,
+        "height": 1080,
+        "rotate": null,
+        "mirror": null,
+        "resize_mode": "contain",
+        "max_duration": 60,
+        "filename": "virtual.mp4"
+      }
+    }
+  ]
+}
