@@ -17,20 +17,18 @@ namespace WPFTest
 
     public partial class MainWindow : Window
     {
-        [DllImport("kernel32.dll")]
-        static extern bool AllocConsole();
+    
         public MainWindow()
         {
             EnvReader.Load(SolutionRoot.ToSolutionAbsolutePath(".env"));
 
             InitializeComponent();
-            AllocConsole();  // Call to open console
             Console.WriteLine("Console opened!");
 
             ComboBox1.ItemsSource = Enum.GetValues(typeof(LogCategory));
             ComboBox1.SelectedIndex = 0;
 
-            
+
         }
 
         private void btnReadLogs_Click(object sender, RoutedEventArgs e)
@@ -61,7 +59,7 @@ namespace WPFTest
             await plugin.Authenticate();
         }
 
-        private void btnLoadPlugin_Click(object sender, RoutedEventArgs e)
+        private async void btnLoadPlugin_Click(object sender, RoutedEventArgs e)
         {
             SnapchatPlugin plugin = new SnapchatPlugin();
 
