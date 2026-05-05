@@ -1,10 +1,12 @@
 ﻿using System;
 using Newtonsoft.Json;
-using namespace.persistence
+using Layers.Persistence.Models;
 
 //Datamodel for Messages for Normalisator
 //Gemaakt door J.C.G van den Hurk
 //Datum: 13-4-2026 - 23-4-2026
+
+//https://github.com/Tyrrrz/DiscordChatExporter
 
 //Scope: De JSON export van Discord bevat veel informatie, maar de gestelde eisen na aanleiding van het bezoek op het hoofdbureau is de prioriteit alleen om Private Messages te exporteren.
 //Dit Data model is gemaakt om de relevante informatie uit de JSON export van Discord te halen en deze te normaliseren zodat deze gebruikt kan worden voor het genereren van een PDF rapportage.

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using Layers.Persistence.Normalisator; //hierbij wordt de verwijzing naar de Normalisator alvast gemaakt, dit zorgt dat deze code al klaar is om de data die uit de JSON file wordt gehaald door te sturen naar de Normalisator.
+using Layers.Persistence.Models; //hierbij wordt de verwijzing naar de Normalisator alvast gemaakt, dit zorgt dat deze code al klaar is om de data die uit de JSON file wordt gehaald door te sturen naar de Normalisator.
 
 //Logisch dat nu nog de "Output folder", "Input folder" en de files die genaamd worden placeholder names hebben.
 //deze worden op termijn aangepast.
@@ -42,34 +42,16 @@ namespace Layers.Persistence
             //Normalisator.
 
             //Stuur deze variable door naar de Normalisator
-            foreach (string parsedJSON in inputJSON)
+            foreach (var message in export.Messages)
             {
-                //Stuur de geparste JSON door naar de Normalisator.
-
-                foreach (var message in messages)
-                {
-                    if (message.Content.Contains("cdn.discord"))
-                    {
-                        // Stuur naar NormalisatorAttachment
-                        NormalisatorAttachment();
-                    }
-                    else
-                    {
-                        // Blijf bij NormalisatorMessage
-                        werk.
-                    }
-                }
-
-                //Deel 2 van de structuur, het doorsturen van de geparste JSON naar de Normalisator.css. 
-
-                //________________________________________________________________
-
-                //Stuur de uitkomst van de Normalisator door naar de PDF Generator.
-                foreach (string parsedJSON in ParsedJSON)
-            {
-                //Stuur de geparste JSON door naar de PDF Generator.
-                PDFGenerator(parsedJSON);
+                Console.WriteLine($"[{message.Timestamp}] {message.Author?.Nickname}: {message.Content}");
             }
+
+            Console.WriteLine("Done.");
+
+            //Deel 2 van de structuur, het doorsturen van de geparste JSON naar de Normalisator.css. 
+
+            //________________________________________________________________
         }
     }
 }
