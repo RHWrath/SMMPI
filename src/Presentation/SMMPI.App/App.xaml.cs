@@ -33,6 +33,7 @@ public partial class App : Application
             }
 
             await EnsurePipAsync(packageDir);
+            await EnsureVenvAsync(packageDir);
             await InstallRequirementsAsync(packageDir);
 
             var window = new MainWindow();
@@ -48,6 +49,28 @@ public partial class App : Application
 
             Shutdown();
         }
+    }
+
+    private static string GetVenvPython(string workingDir)
+    {
+        return Path.Combine(workingDir, ".venv", "Scripts", "python.exe");
+    }
+
+    private static async Task EnsureVenvAsync(string workingDir)
+    {
+        string venvPython = GetVenvPython(workingDir);
+
+        if (File.Exists(venvPython))
+        {
+            Console.WriteLine("Virtual environment already exists.");
+            return;
+        }
+
+        Console.WriteLine("Creating virtual environment...");
+        await ProcessHandler.RunProcessCheckedAsync(
+            "python",
+            "-m venv .venv",
+            workingDir);
     }
 
     private static async Task EnsurePipAsync(string workingDir)
@@ -74,10 +97,14 @@ public partial class App : Application
 
     private static async Task InstallRequirementsAsync(string dependencyPath)
     {
+
+        string venvPython = GetVenvPython(dependencyPath);
+
         Console.WriteLine("Installing dependencies");
+
         await ProcessHandler.RunProcessCheckedAsync(
-            "python",
-            "-m pip install -r requirements.txt",
-            dependencyPath);
+           venvPython,
+           "-m pip install -r requirements.txt",
+           dependencyPath);
     }
 }
