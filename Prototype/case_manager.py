@@ -354,3 +354,26 @@ class CaseManager:
 
         refresh_case_list()
         case_window.wait_window()
+        
+    def select_case_for_current_officer(self, officer_name: str):
+        """
+        Re-open only the case selection screen for an already known officer.
+        Returns a Session or None if cancelled.
+        """
+        self._officer_name = officer_name
+        self._case_number = None
+        
+        if not self._case_number:
+            return None
+        
+        self.session = Session(
+            officer_name=self._officer_name,
+            case_number=self._case_number,
+            case_root=self.config["case_root"]
+        )
+        self.session.ensure_case_folder()
+        
+        print(f"[+] Session changed: officer='{self.session.officer_name}', "f"case='{self.session.case_number}', path='{self.session.case_path}'")
+        print(f"[+] Evidence will save as: {self.session.get_evidence_filename()}")            
+        return self.session
+        

@@ -1,3 +1,5 @@
+from tkinter import Menu
+
 import customtkinter as ctk
 import os
 import sys
@@ -7,8 +9,6 @@ import time
 from folder_selector import FolderSelector
 from image_display import ImageDisplay
 from ui_setup import UISetup, show_toast
-from adb_setup import start_adb_server
-from ui_setup import UISetup
 from adb_setup import start_adb_server, stop_adb_server
 from device_manager import DeviceManager
 from stream_wrapper import ScrcpyCanvasWrapper
@@ -23,8 +23,13 @@ class MediaDisplayApp:
     def __init__(self):
         self.app = ctk.CTk()
         ctk.set_appearance_mode("dark")
-        self.app.geometry("1400x800")
+        self.app.attributes("-fullscreen", True)
+        self.app.resizable(False, False)
         self.app.title("ADB Media Manager")
+
+
+        #Filemenu 
+        self.setup_toolbar()
 
         start_adb_server()
 
@@ -51,14 +56,62 @@ class MediaDisplayApp:
         self.setup_ui()
         self.app.withdraw()
         
+
+        
         # Recording 
         self.recording_manager = RecordingManager()
-        self._recording_resize_after_id = None
-        self.app.bind("<Configure>", self.on_window_configure)
         self._last_sent_crop = None 
         self._recording_start_time = None
         self._recording_timer_after_id = None
+
+    def setup_toolbar(self):
+        menubar = Menu(self.app)
+        self.app.config(menu=menubar)
+
+        file_menu = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+
+        file_menu.add_command(label="New Case", command=self.on_new_case)
+        file_menu.add_command(label="Open Case", command=self.on_open_case)
+        file_menu.add_separator()
+        file_menu.add_command(label="Close App", command=self.app.quit)
+        
+    def on_new_case(self):
+        self._open_case_manager_from_toolbar(mode="new")
+    def on_open_case(self):
+        self._open_case_manager_from_toolbar(mode="open")
        
+    def _open_case_manager_from_toolbar(self, mode="open"):
+        if not self.session:
+            show_toast(self.app, "No active session. Please log in first.", fg_color="#d94040")
+            return
+        
+        try: 
+            case_manager = CaseManager(self.app)
+            new_session = case_manager.select_case_for_current_officer(self.session.officer_name)
+            
+            if not new_session:
+                return
+            
+            self.session = new_session
+            self.app.title(f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}")
+
+            if hasattr(self, "session_status_label") and self.session_status_label.winfo_exists():
+                self.session_status_label.configure(
+                    text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
+                )
+                
+                show_toast(self.app, f"Switched to case {self.session.case_number}", fg_color="#4A9EFF")
+                
+        except Exception as e:
+            print(f"[ERROR] Menu case switch failed: {e}")
+            show_toast(self.app, "Failed to switch case", fg_color="#d94040")
+       
+       
+    #def exit_fullscreen(event):
+    #    root.attributes('-fullscreen', False)
+    #    root.resizable(True, True)
+    #root.bind('<Escape>', exit_fullscreen)  
         
     def setup_ui(self):
         main_frame = UISetup.create_main_frame(self.app)
@@ -434,7 +487,7 @@ class MediaDisplayApp:
 
         self.app.after(0, startup_flow)
         self.app.mainloop()
-
+        
     def get_widget_relative_geometry(self, widget):
         widget.update_idletasks()
         self.app.update_idletasks()
@@ -508,19 +561,6 @@ class MediaDisplayApp:
                     self.info_label.configure(text=f"Recording error: {str(e)}")
                     print(f"[ERROR] toggle_recording: {e}")
                     
-    def on_window_configure(self, event):
-        if not self.recording_manager.is_recording():
-            return
-        if event.widget != self.app:
-            return
-        if self._recording_resize_after_id is not None:
-            try:
-                self.app.after_cancel(self._recording_resize_after_id)
-            except Exception:
-                pass
-
-        self._recording_resize_after_id = self.app.after(350, self._refresh_recording_crop)
-
             
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
