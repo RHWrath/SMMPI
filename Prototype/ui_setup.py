@@ -44,6 +44,33 @@ class UISetup:
         return main_frame
 
     @staticmethod
+    def setup_top_toolbar(parent):
+        """
+        Top-of-window toolbar strip. Buttons in here are hidden by default
+        and shown after login by the calling code.
+        """
+        toolbar = ctk.CTkFrame(parent, fg_color="transparent", height=40)
+        toolbar.pack(fill="x", padx=10, pady=(8, 0))
+
+        add_platform_button = ctk.CTkButton(
+            toolbar,
+            text="+ Add Platform",
+            corner_radius=20,
+            font=("Arial", 12),
+            width=140,
+        )
+        manage_platforms_button = ctk.CTkButton(
+            toolbar,
+            text="Manage Platforms",
+            corner_radius=20,
+            font=("Arial", 12),
+            width=160,
+        )
+        # Don't pack yet — main.py packs them after login
+
+        return toolbar, add_platform_button, manage_platforms_button
+
+    @staticmethod
     def setup_left_panel(parent, on_folder_select_callback):
         left_panel = ctk.CTkFrame(parent)
         left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
@@ -99,9 +126,9 @@ class UISetup:
     def setup_right_panel(parent):
         right_panel = ctk.CTkFrame(parent)
         right_panel.grid(row=0, column=2, sticky="nsew", padx=(5, 0))
-        
+
         header_frame = ctk.CTkFrame(right_panel, fg_color="transparent")
-        header_frame.pack(fill="x", padx=10, pady=(10,5))
+        header_frame.pack(fill="x", padx=10, pady=(10, 5))
 
         title_label = ctk.CTkLabel(
             header_frame,
@@ -109,7 +136,7 @@ class UISetup:
             font=("Arial", 14, "bold")
         )
         title_label.pack(pady=(10, 5))
-        
+
         recording_timer_label = ctk.CTkLabel(
             header_frame,
             text="00:00:00",
@@ -157,7 +184,7 @@ class UISetup:
             state="disabled",
         )
         close_app_button.pack(pady=(0, 5))
-        
+
         record_button = ctk.CTkButton(
             right_panel,
             text="Start Recording",

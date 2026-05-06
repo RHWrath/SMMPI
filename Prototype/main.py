@@ -15,6 +15,7 @@ from stream_wrapper import ScrcpyCanvasWrapper
 from image_to_video import on_image_confirm
 from video import on_video_confirm
 from platform_management import get_active_platform
+from platform_wizard import PlatformWizard, PlatformEditor
 from recording_manager import RecordingManager
 from case_manager import CaseManager
 
@@ -50,24 +51,29 @@ class MediaDisplayApp:
         self.session = None
         self.setup_ui()
         self.app.withdraw()
-        
-        # Recording 
+
+        # Recording
         self.recording_manager = RecordingManager()
         self._recording_resize_after_id = None
         self.app.bind("<Configure>", self.on_window_configure)
-        self._last_sent_crop = None 
+        self._last_sent_crop = None
         self._recording_start_time = None
         self._recording_timer_after_id = None
-       
-        
+
     def setup_ui(self):
+        # Top toolbar (buttons stay hidden until login completes)
+        self.top_toolbar, self.add_platform_button, self.manage_platforms_button = \
+            UISetup.setup_top_toolbar(self.app)
+        self.add_platform_button.configure(command=self._open_add_platform_wizard)
+        self.manage_platforms_button.configure(command=self._open_manage_platforms)
+
         main_frame = UISetup.create_main_frame(self.app)
 
         self.left_panel, self.select_button, self.folder_path_label, self.media_scroll_frame = \
             UISetup.setup_left_panel(main_frame, self.on_folder_select)
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
-        
+
         self.middle_panel.configure(width=360, height=460)
         self.middle_panel.pack_propagate(False) if hasattr(self.middle_panel, "pack_propagate") else None
         self.middle_panel.grid_propagate(False)
@@ -151,6 +157,31 @@ class MediaDisplayApp:
             text_color="#4A9EFF"
         )
         self.session_status_label.pack(pady=(0, 5))
+
+        # Reveal toolbar buttons that should only be available after login
+        if self.session.officer_name:
+            # Pack "Manage Platforms" first so "+ Add Platform" lands to its left
+            # (side="right" stacks right-to-left visually).
+            self.manage_platforms_button.pack(side="right", padx=(6, 0))
+            self.add_platform_button.pack(side="right", padx=(6, 0))
+
+    def _open_add_platform_wizard(self):
+        """Open the Add Platform wizard. Gated by an active session."""
+        if not self.session or not self.session.officer_name:
+            show_toast(self.app, "Login required to add platforms", fg_color="#d94040")
+            return
+        PlatformWizard(self.app, on_saved=self._on_platform_saved)
+
+    def _open_manage_platforms(self):
+        """Open the Manage Platforms editor. Gated by an active session."""
+        if not self.session or not self.session.officer_name:
+            show_toast(self.app, "Login required to manage platforms", fg_color="#d94040")
+            return
+        PlatformEditor.open(self.app, on_saved=self._on_platform_saved)
+
+    def _on_platform_saved(self, config):
+        """Hook called after the wizard or editor successfully writes."""
+        print(f"[+] Platform '{config['name']}' saved by {self.session.officer_name}")
 
     def _start_connection_monitor(self):
         """Start polling the device connection every 3 seconds."""
@@ -443,10 +474,9 @@ class MediaDisplayApp:
         y = widget.winfo_rooty() - self.app.winfo_rooty()
         width = widget.winfo_width()
         height = widget.winfo_height()
-        
+
         return (x, y, width, height)
-    
-    
+
     def toggle_recording(self):
         # Stop Recoring Logic
         try:
@@ -455,10 +485,9 @@ class MediaDisplayApp:
                 self.record_button.configure(text="Start Recording")
                 self.info_label.configure(text="Recording stopped")
                 self._last_sent_crop = None
-                
-                
-                self.video_border_frame.configure(fg_color="black")             
-                
+
+                self.video_border_frame.configure(fg_color="black")
+
                 if self._recording_timer_after_id is not None:
                     try:
                         self.app.after_cancel(self._recording_timer_after_id)
@@ -469,21 +498,21 @@ class MediaDisplayApp:
                 self._recording_start_time = None
                 self.recording_timer_label.configure(text="00:00:00", text_color="gray60")
                 return
-                
+
             if not self.session:
                 self.info_label.configure(text="No active case session.")
                 return
-            
+
             platform_name = "UnknownPlatform"
             if hasattr(self, "active_platform") and self.active_platform:
                 platform_name = self.active_platform["name"]
-                
+
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
             self._last_sent_crop = (x, y, w, h)
             print(f"[DEBUG] Relative canvas geometry: x={x}, y={y}, w={w}, h={h}")
             print(f"[DEBUG] App root: x={self.app.winfo_rootx()}, y={self.app.winfo_rooty()}")
             print(f"[DEBUG] Canvas root: x={self.video_canvas.winfo_rootx()}, y={self.video_canvas.winfo_rooty()}")
-            
+
             self.recording_manager.create_session(
                 case_folder=self.session.case_path,
                 platform_name=platform_name,
@@ -493,24 +522,24 @@ class MediaDisplayApp:
                 capture_height=h,
                 window_title=self.app.title(),
                 audio_device=None
-            )    
+            )
             # Start recording Logic
             self.recording_manager.start_recording()
             self.record_button.configure(text="Stop Recording")
-            self.info_label.configure(text="Recording started") 
-            
+            self.info_label.configure(text="Recording started")
+
             # Add red border to video canvas to indicate recording
-            self.video_border_frame.configure(fg_color="red")   
-            
+            self.video_border_frame.configure(fg_color="red")
+
             # Start recording timer
             self._recording_start_time = time.time()
             self.recording_timer_label.configure(text="00:00:00", text_color="red")
             self._update_recording_timer()
-            
+
         except Exception as e:
-                    self.info_label.configure(text=f"Recording error: {str(e)}")
-                    print(f"[ERROR] toggle_recording: {e}")
-                    
+            self.info_label.configure(text=f"Recording error: {str(e)}")
+            print(f"[ERROR] toggle_recording: {e}")
+
     def on_window_configure(self, event):
         if not self.recording_manager.is_recording():
             return
@@ -526,50 +555,49 @@ class MediaDisplayApp:
 
     def _refresh_recording_crop(self):
         self._recording_resize_after_id = None
-        
+
         if not self.recording_manager.is_recording():
             return
-        
-        try: 
+
+        try:
             self.app.update_idletasks()
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
-            
+
             if w < 50 or h < 50:
                 return
 
             new_crop = (x, y, w, h)
-            
+
             if self._last_sent_crop == new_crop:
                 return
-            
+
             print(f"[DEBUG] Auto crop refresh: x={x}, y={y}, w={w}, h={h}")
-            
+
             self.recording_manager.update_crop(x, y, w, h)
-            self._last_sent_crop = new_crop        
-        
+            self._last_sent_crop = new_crop
+
         except Exception as e:
             print(f"[ERROR] Failed to refresh recording crop: {e}")
-            
+
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
             print(f"[DEBUG] Not updating timer - recording not active {self.recording_manager.is_recording()}")
             return
-        
+
         elapsed = int(time.time() - self._recording_start_time)
-        
+
         hours = elapsed // 3600
-        minutes = (elapsed % 3600) // 60 
+        minutes = (elapsed % 3600) // 60
         seconds = elapsed % 60
 
-        self.recording_timer_label.configure( 
+        self.recording_timer_label.configure(
             text=f"● {hours:02d}:{minutes:02d}:{seconds:02d}",
             text_color="red"
-            )
-     
+        )
+
         self._recording_timer_after_id = self.app.after(1000, self._update_recording_timer)
-            
+
 
 if __name__ == "__main__":
     app = MediaDisplayApp()
     app.run()
-    
