@@ -23,13 +23,13 @@ class MediaDisplayApp:
     def __init__(self):
         self.app = ctk.CTk()
         ctk.set_appearance_mode("dark")
-        self.app.attributes("-fullscreen", True)
+        #Fixed size no resizing to avoid complications with stream capture and recording dimensions
+        self.app.geometry("1400x800")
         self.app.resizable(False, False)
         self.app.title("ADB Media Manager")
 
 
-        #Filemenu 
-        self.setup_toolbar()
+
 
         start_adb_server()
 
@@ -64,56 +64,14 @@ class MediaDisplayApp:
         self._recording_start_time = None
         self._recording_timer_after_id = None
 
-    def setup_toolbar(self):
-        menubar = Menu(self.app)
-        self.app.config(menu=menubar)
 
-        file_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="File", menu=file_menu)
-
-        file_menu.add_command(label="New Case", command=self.on_new_case)
-        file_menu.add_command(label="Open Case", command=self.on_open_case)
-        file_menu.add_separator()
-        file_menu.add_command(label="Close App", command=self.app.quit)
-        
-    def on_new_case(self):
-        self._open_case_manager_from_toolbar(mode="new")
-    def on_open_case(self):
-        self._open_case_manager_from_toolbar(mode="open")
-       
-    def _open_case_manager_from_toolbar(self, mode="open"):
-        if not self.session:
-            show_toast(self.app, "No active session. Please log in first.", fg_color="#d94040")
-            return
-        
-        try: 
-            case_manager = CaseManager(self.app)
-            new_session = case_manager.select_case_for_current_officer(self.session.officer_name)
-            
-            if not new_session:
-                return
-            
-            self.session = new_session
-            self.app.title(f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}")
-
-            if hasattr(self, "session_status_label") and self.session_status_label.winfo_exists():
-                self.session_status_label.configure(
-                    text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
-                )
-                
-                show_toast(self.app, f"Switched to case {self.session.case_number}", fg_color="#4A9EFF")
-                
-        except Exception as e:
-            print(f"[ERROR] Menu case switch failed: {e}")
-            show_toast(self.app, "Failed to switch case", fg_color="#d94040")
-       
-       
-    #def exit_fullscreen(event):
-    #    root.attributes('-fullscreen', False)
-    #    root.resizable(True, True)
-    #root.bind('<Escape>', exit_fullscreen)  
         
     def setup_ui(self):
+            
+        (self.topbar, self.menu_button, self.session_toolbar_label) = UISetup.setup_topbar( self.app, self.toggle_sidebar)
+        (self.sidebar, self.new_case_btn, self.open_case_btn) = UISetup.setup_sidebar(self.app, self.on_new_case, self.on_open_case)
+        self.sidebar_visible = False   
+    
         main_frame = UISetup.create_main_frame(self.app)
 
         self.left_panel, self.select_button, self.folder_path_label, self.media_scroll_frame = \
@@ -134,6 +92,35 @@ class MediaDisplayApp:
 
         self.add_device_status()
         self.add_platform_status()
+        
+    def on_new_case(self):
+        CaseManager(self.app)._show_case_selection_screen()
+    def on_open_case(self):
+        CaseManager(self.app)._show_case_selection_screen()
+
+    def toggle_sidebar(self):
+        if self.sidebar_visible:
+            self.sidebar.place_forget()
+            self.sidebar_visible = False
+        else:
+            self.sidebar.place(x=0, y=42, relheight=1.0)
+            self.sidebar.lift()
+            self.sidebar_visible = True
+    
+    def update_toolbar_session_label(self):
+        if not hasattr(self, "session_toolbar_label"):
+            return
+
+        if self.session:
+            self.session_toolbar_label.configure(
+                text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}",
+                text_color="#4A9EFF"
+            )
+        else:
+            self.session_toolbar_label.configure(
+                text="No active session",
+                text_color="gray70"
+            )
 
     def start_stream(self):
         if not self.selected_device:
@@ -476,6 +463,7 @@ class MediaDisplayApp:
 
             # Show session info in the UI
             self.add_session_status()
+            self.update_toolbar_session_label()
 
             # Update window title with session info
             self.app.title(
