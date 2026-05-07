@@ -1,3 +1,5 @@
+from tkinter import Menu
+
 import customtkinter as ctk
 import os
 import sys
@@ -7,8 +9,6 @@ import time
 from folder_selector import FolderSelector
 from image_display import ImageDisplay
 from ui_setup import UISetup, show_toast
-from adb_setup import start_adb_server
-from ui_setup import UISetup
 from adb_setup import start_adb_server, stop_adb_server
 from device_manager import DeviceManager
 from stream_wrapper import ScrcpyCanvasWrapper
@@ -23,8 +23,13 @@ class MediaDisplayApp:
     def __init__(self):
         self.app = ctk.CTk()
         ctk.set_appearance_mode("dark")
+        #Fixed size no resizing to avoid complications with stream capture and recording dimensions
         self.app.geometry("1400x800")
+        self.app.resizable(False, False)
         self.app.title("ADB Media Manager")
+
+
+
 
         start_adb_server()
 
@@ -51,16 +56,22 @@ class MediaDisplayApp:
         self.setup_ui()
         self.app.withdraw()
         
+
+        
         # Recording 
         self.recording_manager = RecordingManager()
-        self._recording_resize_after_id = None
-        self.app.bind("<Configure>", self.on_window_configure)
         self._last_sent_crop = None 
         self._recording_start_time = None
         self._recording_timer_after_id = None
-       
+
+
         
     def setup_ui(self):
+            
+        (self.topbar, self.menu_button, self.session_toolbar_label) = UISetup.setup_topbar( self.app, self.toggle_sidebar)
+        (self.sidebar, self.new_case_btn, self.open_case_btn) = UISetup.setup_sidebar(self.app, self.on_new_case, self.on_open_case)
+        self.sidebar_visible = False   
+    
         main_frame = UISetup.create_main_frame(self.app)
 
         self.left_panel, self.select_button, self.folder_path_label, self.media_scroll_frame = \
@@ -81,6 +92,35 @@ class MediaDisplayApp:
 
         self.add_device_status()
         self.add_platform_status()
+        
+    def on_new_case(self):
+        CaseManager(self.app)._show_case_selection_screen()
+    def on_open_case(self):
+        CaseManager(self.app)._show_case_selection_screen()
+
+    def toggle_sidebar(self):
+        if self.sidebar_visible:
+            self.sidebar.place_forget()
+            self.sidebar_visible = False
+        else:
+            self.sidebar.place(x=0, y=42, relheight=1.0)
+            self.sidebar.lift()
+            self.sidebar_visible = True
+    
+    def update_toolbar_session_label(self):
+        if not hasattr(self, "session_toolbar_label"):
+            return
+
+        if self.session:
+            self.session_toolbar_label.configure(
+                text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}",
+                text_color="#4A9EFF"
+            )
+        else:
+            self.session_toolbar_label.configure(
+                text="No active session",
+                text_color="gray70"
+            )
 
     def start_stream(self):
         if not self.selected_device:
@@ -423,6 +463,7 @@ class MediaDisplayApp:
 
             # Show session info in the UI
             self.add_session_status()
+            self.update_toolbar_session_label()
 
             # Update window title with session info
             self.app.title(
@@ -434,7 +475,7 @@ class MediaDisplayApp:
 
         self.app.after(0, startup_flow)
         self.app.mainloop()
-
+        
     def get_widget_relative_geometry(self, widget):
         widget.update_idletasks()
         self.app.update_idletasks()
@@ -474,9 +515,7 @@ class MediaDisplayApp:
                 self.info_label.configure(text="No active case session.")
                 return
             
-            platform_name = "UnknownPlatform"
-            if hasattr(self, "active_platform") and self.active_platform:
-                platform_name = self.active_platform["name"]
+            
                 
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
             self._last_sent_crop = (x, y, w, h)
@@ -486,7 +525,6 @@ class MediaDisplayApp:
             
             self.recording_manager.create_session(
                 case_folder=self.session.case_path,
-                platform_name=platform_name,
                 capture_x=x,
                 capture_y=y,
                 capture_width=w,
@@ -511,44 +549,6 @@ class MediaDisplayApp:
                     self.info_label.configure(text=f"Recording error: {str(e)}")
                     print(f"[ERROR] toggle_recording: {e}")
                     
-    def on_window_configure(self, event):
-        if not self.recording_manager.is_recording():
-            return
-        if event.widget != self.app:
-            return
-        if self._recording_resize_after_id is not None:
-            try:
-                self.app.after_cancel(self._recording_resize_after_id)
-            except Exception:
-                pass
-
-        self._recording_resize_after_id = self.app.after(350, self._refresh_recording_crop)
-
-    def _refresh_recording_crop(self):
-        self._recording_resize_after_id = None
-        
-        if not self.recording_manager.is_recording():
-            return
-        
-        try: 
-            self.app.update_idletasks()
-            x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
-            
-            if w < 50 or h < 50:
-                return
-
-            new_crop = (x, y, w, h)
-            
-            if self._last_sent_crop == new_crop:
-                return
-            
-            print(f"[DEBUG] Auto crop refresh: x={x}, y={y}, w={w}, h={h}")
-            
-            self.recording_manager.update_crop(x, y, w, h)
-            self._last_sent_crop = new_crop        
-        
-        except Exception as e:
-            print(f"[ERROR] Failed to refresh recording crop: {e}")
             
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():

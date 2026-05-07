@@ -7,30 +7,11 @@ import time
 import sys
 import subprocess
 from utils import get_ffmpeg_path
-import zmq
 
-def ffmpeg_supports_zmq(ffmpeg_path: str) -> bool:
-    try:
-        result = subprocess.run(
-            [ffmpeg_path, "-filters"],
-            capture_output=True,
-            text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-            timeout=10
-        )
-
-        if result.returncode != 0:
-            return False
-
-        output = result.stdout.lower()
-        return " zmq " in output or "\n... zmq " in output or "azmq" in output
-    except Exception:
-        return False
 
 @dataclass
 class RecordingSession:
     case_name: str
-    platform_name: str
     output_folder: str
     temp_file_path: str
     final_file_path: str
@@ -53,7 +34,6 @@ class RecordingManager:
     def create_session(
         self,
         case_folder: str,
-        platform_name: str,
         capture_x: int,
         capture_y: int,
         capture_width: int,
@@ -63,14 +43,13 @@ class RecordingManager:
         is_recording: bool = False
     ) -> RecordingSession:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        safe_platform_name = self._sanitize_name(platform_name)
+        
 
-        temp_file_path = os.path.join(case_folder, f"{safe_platform_name}_{timestamp}_temp.mkv")
-        final_file_path = os.path.join(case_folder, f"{safe_platform_name}_{timestamp}.mp4")
+        temp_file_path = os.path.join(case_folder, f"{timestamp}_temp.mkv")
+        final_file_path = os.path.join(case_folder, f"{timestamp}.mp4")
 
         session = RecordingSession(
             case_name=os.path.basename(case_folder),
-            platform_name=platform_name,
             output_folder=case_folder,
             temp_file_path=temp_file_path,
             final_file_path=final_file_path,
@@ -109,11 +88,7 @@ class RecordingManager:
         if not ffmpeg_path:
             raise RuntimeError("FFmpeg executable not found. Please ensure FFmpeg is installed and added to PATH.")
                 
-   
-        self.zmq_port = self._get_free_port()
-        if not self.zmq_port:
-            raise RuntimeError("Failed to find a free port for ZMQ communication.")
-   
+
         session = self.current_session
         
         cmd = [
@@ -122,9 +97,7 @@ class RecordingManager:
             "-f", "gdigrab",
             "-framerate", "30",
             "-i", f"title={session.window_title}",
-           "-vf", (
-                f"zmq=bind_address=tcp\\\\://127.0.0.1\\\\:{self.zmq_port},"
-                f"crop@phone={session.capture_width}:{session.capture_height}:{session.capture_x}:{session.capture_y}"),
+            "-vf", f"crop@phone={session.capture_width}:{session.capture_height}:{session.capture_x}:{session.capture_y}",
             "-c:v", "libx264",
             "-preset", "veryfast",
             "-pix_fmt", "yuv420p",
@@ -268,51 +241,4 @@ class RecordingManager:
             raise RuntimeError("Failed to remux MKV to MP4.")     
         
         
-    def update_crop(self, x: int, y: int, width: int, height: int):
-        if not self.is_recording():
-            return
-        
-        context = None
-        socket = None
-        
-        try:
-            context = zmq.Context()
-            socket = context.socket(zmq.REQ)
-            socket.setsockopt(zmq.LINGER, 0)
-            socket.setsockopt(zmq.RCVTIMEO, 1000)
-            socket.setsockopt(zmq.SNDTIMEO, 1000)
-            
-            socket.connect(f"tcp://127.0.0.1:{self.zmq_port}")
-            
-            commands = [
-            f"crop@phone x {x}",
-            f"crop@phone y {y}",
-            f"crop@phone w {width}",
-            f"crop@phone h {height}",
-         ]
-
-            for command in commands:
-                print(f"[DEBUG] Sending crop command: {command}")
-                socket.send_string(command)
-                reply = socket.recv_string()
-                print(f"[DEBUG] ZMQ reply: {reply}")
-                
-            if self.current_session:
-                self.current_session.capture_x = x
-                self.current_session.capture_y = y
-                self.current_session.capture_width = width
-                self.current_session.capture_height = height
-        
-        except Exception as e:
-            print(f"[ERROR] Failed to update crop: {e}")
-            
-        finally:
-            if socket is not None:
-                socket.close()
-            if context is not None:
-                context.term()    
-                
-    def _get_free_port(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("127.0.0.1", 0))
-            return s.getsockname()[1]
+    

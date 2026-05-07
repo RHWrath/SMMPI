@@ -169,3 +169,68 @@ class UISetup:
         record_button.pack(pady=(0, 5))
 
         return right_panel, video_border_frame, video_canvas, status_label, close_app_button, record_button, recording_timer_label
+    
+    @staticmethod
+    def setup_topbar(parent, on_menu_click):
+        topbar = ctk.CTkFrame(
+            parent,
+            height=42,
+            fg_color="#1f1f1f",
+            corner_radius=0
+        )
+        topbar.pack(fill="x", side="top")
+        topbar.pack_propagate(False)
+
+        menu_button = ctk.CTkButton(
+            topbar,
+            text="☰",
+            width=40,
+            height=32,
+            font=("Arial", 18, "bold"),
+            fg_color="transparent",
+            hover_color="#333333",
+            command=on_menu_click
+        )
+        menu_button.pack(side="left", padx=8, pady=5)
+
+        session_label = ctk.CTkLabel(
+            topbar,
+            text="No active session",
+            font=("Arial", 11),
+            text_color="#4A9EFF"
+        )
+        session_label.pack(side="left", padx=10)
+
+        return topbar, menu_button, session_label
+
+    @staticmethod
+    def setup_sidebar(parent, on_new_case, on_open_case):
+        sidebar = ctk.CTkFrame(
+            parent,
+            width=220,
+            fg_color="#181818",
+            corner_radius=0
+        )
+
+        new_case_btn = ctk.CTkButton(
+            sidebar,
+            text="New Case",
+            command=on_new_case
+        )
+        new_case_btn.pack(fill="x", padx=10, pady=(15,5))
+
+        open_case_btn = ctk.CTkButton(
+            sidebar,
+            text="Open Case",
+            command=on_open_case
+        )
+        open_case_btn.pack(fill="x", padx=10, pady=5)
+
+        settings_btn = ctk.CTkButton(
+            sidebar,
+            text="Settings"
+        )
+        settings_btn.pack(fill="x", padx=10, pady=(25,5))
+
+
+        return sidebar, new_case_btn, open_case_btn
