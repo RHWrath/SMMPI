@@ -24,13 +24,10 @@ class MediaDisplayApp:
     def __init__(self):
         self.app = ctk.CTk()
         ctk.set_appearance_mode("dark")
-        #Fixed size no resizing to avoid complications with stream capture and recording dimensions
+        # Fixed size no resizing to avoid complications with stream capture and recording dimensions
         self.app.geometry("1400x800")
         self.app.resizable(False, False)
         self.app.title("ADB Media Manager")
-
-
-
 
         start_adb_server()
 
@@ -56,23 +53,25 @@ class MediaDisplayApp:
         self.session = None
         self.setup_ui()
         self.app.withdraw()
-        
 
-        
-        # Recording 
+        # Recording
         self.recording_manager = RecordingManager()
-        self._last_sent_crop = None 
+        self._last_sent_crop = None
         self._recording_start_time = None
         self._recording_timer_after_id = None
 
-
-        
     def setup_ui(self):
-            
-        (self.topbar, self.menu_button, self.session_toolbar_label) = UISetup.setup_topbar( self.app, self.toggle_sidebar)
-        (self.sidebar, self.new_case_btn, self.open_case_btn) = UISetup.setup_sidebar(self.app, self.on_new_case, self.on_open_case)
-        self.sidebar_visible = False   
 
+        (self.topbar, self.menu_button, self.session_toolbar_label) = UISetup.setup_topbar(self.app,
+                                                                                           self.toggle_sidebar)
+        (self.sidebar, self.new_case_btn, self.open_case_btn,
+         self.sidebar_platform_label, self.sidebar_add_platform_btn, self.sidebar_manage_platforms_btn) = \
+            UISetup.setup_sidebar(
+                self.app, self.on_new_case, self.on_open_case,
+                on_add_platform=self._open_add_platform_wizard,
+                on_manage_platforms=self._open_manage_platforms
+            )
+        self.sidebar_visible = False
 
         # Recording
         self.recording_manager = RecordingManager()
@@ -95,10 +94,6 @@ class MediaDisplayApp:
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
 
-        self.middle_panel.configure(width=360, height=460)
-        self.middle_panel.pack_propagate(False) if hasattr(self.middle_panel, "pack_propagate") else None
-        self.middle_panel.grid_propagate(False)
-
         (self.right_panel, self.video_border_frame, self.video_canvas, self.right_status_label,
          self.close_app_button, self.record_button, self.recording_timer_label) = UISetup.setup_right_panel(main_frame)
 
@@ -108,9 +103,10 @@ class MediaDisplayApp:
 
         self.add_device_status()
         self.add_platform_status()
-        
+
     def on_new_case(self):
         CaseManager(self.app)._show_case_selection_screen()
+
     def on_open_case(self):
         CaseManager(self.app)._show_case_selection_screen()
 
@@ -122,7 +118,7 @@ class MediaDisplayApp:
             self.sidebar.place(x=0, y=42, relheight=1.0)
             self.sidebar.lift()
             self.sidebar_visible = True
-    
+
     def update_toolbar_session_label(self):
         if not hasattr(self, "session_toolbar_label"):
             return
@@ -208,12 +204,11 @@ class MediaDisplayApp:
         )
         self.session_status_label.pack(pady=(0, 5))
 
-        # Reveal toolbar buttons that should only be available after login
+        # Reveal platform buttons in sidebar after login
         if self.session.officer_name:
-            # Pack "Manage Platforms" first so "+ Add Platform" lands to its left
-            # (side="right" stacks right-to-left visually).
-            self.manage_platforms_button.pack(side="right", padx=(6, 0))
-            self.add_platform_button.pack(side="right", padx=(6, 0))
+            self.sidebar_platform_label.pack(fill="x", padx=10, pady=(20, 2))
+            self.sidebar_add_platform_btn.pack(fill="x", padx=10, pady=(0, 5))
+            self.sidebar_manage_platforms_btn.pack(fill="x", padx=10, pady=(0, 5))
 
     def _open_add_platform_wizard(self):
         """Open the Add Platform wizard. Gated by an active session."""
@@ -516,7 +511,7 @@ class MediaDisplayApp:
 
         self.app.after(0, startup_flow)
         self.app.mainloop()
-        
+
     def get_widget_relative_geometry(self, widget):
         widget.update_idletasks()
         self.app.update_idletasks()
