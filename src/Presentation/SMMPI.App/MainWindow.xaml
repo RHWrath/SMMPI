@@ -9,6 +9,7 @@
     <Grid>
         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Width="300">
             <Button x:Name="btnAuth" Content="Authenticate Discord" HorizontalAlignment="Center" Margin="0,0,0,0" VerticalAlignment="Center" Click="btnAuth_Click"/>
+            <Button x:Name="btnLoadPlugin" Content="Load Plugin" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Center" Click="btnLoadPlugin_Click"/>
         </StackPanel>
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="300">
             <Button x:Name="btnControl" Content="Button" HorizontalAlignment="Center" Margin="0,0,0,0" VerticalAlignment="Center"/>

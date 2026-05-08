@@ -1,0 +1,196 @@
+import threading
+import time
+from PIL import Image, ImageTk
+from queue import Queue, Empty
+
+
+class ScrcpyCanvasWrapper:
+    
+    def __init__(self, canvas, port=27183, max_size=1080, max_fps=24):
+        self.canvas = canvas
+        self.port = port
+        self.max_size = max_size
+        self.max_fps = max_fps
+        
+        self.stream = None
+        self.running = False
+        self.stream_thread = None
+        self._display_after_id = None
+        
+        self.current_frame = None
+        self.frame_lock = threading.Lock()
+        
+        self.canvas.bind("<Button-1>", self._on_canvas_click)
+        self.canvas.bind("<B1-Motion>", self._on_canvas_drag)
+        self.canvas.bind("<ButtonRelease-1>", self._on_canvas_release)
+        
+        self.touch_start_x = None
+        self.touch_start_y = None
+        self.is_dragging = False
+        self.last_move_time = 0
+        self.move_throttle = 0.010
+    
+    def start(self):
+        if self.running:
+            return
+        
+        self.running = True
+        
+        def run_stream():
+            try:
+                from stream_new import ScrcpyStream
+                import cv2
+                
+                print("[*] Creating ScrcpyStream instance...")
+                self.stream = ScrcpyStream(
+                    port=self.port,
+                    max_size=self.max_size,
+                    max_fps=self.max_fps
+                )
+                
+                original_display = self.stream.display_frames
+                self.stream.display_frames = lambda: self._capture_frames()
+                
+                print("[*] Running ScrcpyStream (embedded mode)...")
+                self.stream.run()
+                print("[*] ScrcpyStream ended")
+            except Exception as e:
+                print(f"[!] Error in stream: {e}")
+                import traceback
+                traceback.print_exc()
+            finally:
+                self.running = False
+        
+        self.stream_thread = threading.Thread(target=run_stream, daemon=True)
+        self.stream_thread.start()
+        
+        self._update_canvas()
+    
+    def _capture_frames(self):
+        print("[*] Frame capture mode - displaying in Tkinter canvas")
+        
+        timeout = time.time() + 15
+        while self.stream.running and self.stream.width is None and time.time() < timeout:
+            time.sleep(0.1)
+        
+        if not self.stream.running or self.stream.width is None:
+            print("[-] No frames received")
+            return
+        
+        print(f"[+] Stream resolution: {self.stream.width}x{self.stream.height}")
+        
+        while self.stream.running:
+            try:
+                frame = self.stream.frame_queue.get(timeout=0.1)
+                
+                with self.frame_lock:
+                    self.current_frame = frame.copy()
+                    
+            except Empty:
+                pass
+            except Exception as e:
+                print(f"[!] Frame capture error: {e}")
+                time.sleep(0.01)
+        
+        print("[*] Frame capture ended")
+    
+    def _update_canvas(self):
+        if not self.running:
+            return
+        
+        try:
+            with self.frame_lock:
+                frame = self.current_frame
+            
+            if frame is not None:
+                import cv2
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                image = Image.fromarray(frame_rgb)
+                
+                cw = max(self.canvas.winfo_width(), 1)
+                ch = max(self.canvas.winfo_height(), 1)
+                
+                img_w, img_h = image.size
+                scale = min(cw / img_w, ch / img_h)
+                new_w, new_h = int(img_w * scale), int(img_h * scale)
+                
+                resized = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
+                photo = ImageTk.PhotoImage(resized)
+                
+                cx, cy = cw // 2, ch // 2
+                if not hasattr(self, '_image_id'):
+                    self._image_id = self.canvas.create_image(cx, cy, image=photo)
+                else:
+                    self.canvas.coords(self._image_id, cx, cy)
+                    self.canvas.itemconfig(self._image_id, image=photo)
+                
+                self.canvas.image = photo
+                
+        except Exception as e:
+            if "cv2" not in str(e):
+                print(f"[!] Canvas update error: {e}")
+        
+        if self.running:
+            self._display_after_id = self.canvas.after(33, self._update_canvas)
+    
+    def _canvas_to_device_coords(self, cx, cy):
+        if not self.stream or self.stream.width is None:
+            return None, None
+        
+        cw, ch = self.canvas.winfo_width(), self.canvas.winfo_height()
+        img_w, img_h = self.stream.width, self.stream.height
+        
+        scale = min(cw / img_w, ch / img_h)
+        nw, nh = img_w * scale, img_h * scale
+        ox, oy = (cw - nw) / 2, (ch - nh) / 2
+        
+        if cx < ox or cx > ox + nw or cy < oy or cy > oy + nh:
+            return None, None
+        
+        x = (cx - ox) / scale
+        y = (cy - oy) / scale
+        
+        x = max(0, min(x, img_w - 1))
+        y = max(0, min(y, img_h - 1))
+        
+        device_x, device_y = self.stream.map_to_device(x, y)
+        
+        return device_x, device_y
+    
+    def _on_canvas_click(self, event):
+        x, y = self._canvas_to_device_coords(event.x, event.y)
+        if x is not None and y is not None:
+            self.touch_start_x, self.touch_start_y = x, y
+            self.is_dragging = False
+            if self.stream:
+                self.stream.send_touch_event('down', x, y)
+                print(f"[Touch] DOWN at ({x}, {y})")
+    
+    def _on_canvas_drag(self, event):
+        self.is_dragging = True
+        x, y = self._canvas_to_device_coords(event.x, event.y)
+        if x is not None and y is not None and self.stream:
+            now = time.time()
+            if now - self.last_move_time >= self.move_throttle:
+                self.last_move_time = now
+                self.stream.send_touch_event('move', x, y)
+    
+    def _on_canvas_release(self, event):
+        x, y = self._canvas_to_device_coords(event.x, event.y)
+        if x is not None and y is not None and self.stream:
+            self.stream.send_touch_event('up', x, y)
+            print(f"[Touch] UP at ({x}, {y})")
+        
+        self.touch_start_x = None
+        self.touch_start_y = None
+        self.is_dragging = False
+    
+    def stop(self):
+        self.running = False
+        if self.stream:
+            self.stream.running = False
+            self.stream = None
+        
+        if self._display_after_id:
+            self.canvas.after_cancel(self._display_after_id)
+            self._display_after_id = None

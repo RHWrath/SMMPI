@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using OAuth2Bridge;
 using SMMPI.Domain.Entities;
 using SMMPI.Domain.Interfaces;
+using SMMPI.Infrastructure.Plugins.Tools;
 
 namespace SMMPI.Infrastructure.Plugins.Discord;
 
@@ -52,7 +53,7 @@ public class DiscordPlugin : IPlatformPlugin
         try
         {
             // Start the authentication process
-            var userInfo = await server.AuthenticateAsync(CancellationToken.None, @"../../../../../../success.html");
+            var userInfo = await server.AuthenticateAsync(CancellationToken.None, SolutionRoot.ToSolutionAbsolutePath("success.html"));
             Console.WriteLine(JsonConvert.SerializeObject(userInfo, Formatting.Indented));
         }
         catch (OAuthException ex)
