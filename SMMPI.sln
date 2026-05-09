@@ -19,6 +19,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E54C9019-CC5E-4C3D-818E-DEEC87EE1A8B}"
 	ProjectSection(SolutionItems) = preProject
 		docs\Installation.md = docs\Installation.md
+		docs\project-architecture.md = docs\project-architecture.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{206102F9-E489-43ED-9306-47FFDF495486}"
