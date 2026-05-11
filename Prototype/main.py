@@ -70,8 +70,8 @@ class MediaDisplayApp:
             self.app,
             self.on_new_case,
             self.on_open_case,
-            on_add_platform=self._open_add_platform_wizard,
-            on_manage_platforms=self._open_manage_platforms,
+            self._open_add_platform_wizard,
+            self._open_manage_platforms,
         )
         self.sidebar_visible = False
 
@@ -117,6 +117,16 @@ class MediaDisplayApp:
     def change_case(self, success_message="Case changed"):
         if not self.session:
             print("[!] Cannot change case: no active session")
+            return
+
+        if self.recording_manager.is_recording():
+            show_toast(
+                self.app,
+                "Stop the recording before changing case",
+                fg_color="#d94040",
+                duration=3500
+            )
+            print("[!] Case change blocked: recording is currently running")
             return
 
         old_case = self.session.case_number
@@ -249,12 +259,6 @@ class MediaDisplayApp:
         )
         self.session_status_label.pack(pady=(0, 5))
 
-        # Reveal toolbar buttons that should only be available after login
-        if self.session.officer_name:
-            # Pack "Manage Platforms" first so "+ Add Platform" lands to its left
-            # (side="right" stacks right-to-left visually).
-            self.manage_platforms_button.pack(side="right", padx=(6, 0))
-            self.add_platform_button.pack(side="right", padx=(6, 0))
 
     def _open_add_platform_wizard(self):
         """Open the Add Platform wizard. Gated by an active session."""

@@ -248,7 +248,7 @@ class UISetup:
 
         open_case_btn = ctk.CTkButton(
             sidebar,
-            text="Open Case",
+            text="Switch Case",
             command=on_open_case
         )
         open_case_btn.pack(fill="x", padx=10, pady=5)
@@ -268,6 +268,7 @@ class UISetup:
             text="+ Add Platform",
             command=on_add_platform
         )
+        add_platform_btn.pack(fill="x", padx=10, pady=(25, 5))
         # Hidden until login
 
         manage_platforms_btn = ctk.CTkButton(
@@ -275,6 +276,7 @@ class UISetup:
             text="Manage Platforms",
             command=on_manage_platforms
         )
+        manage_platforms_btn.pack(fill="x", padx=10, pady=5)
         # Hidden until login
 
         settings_btn = ctk.CTkButton(
