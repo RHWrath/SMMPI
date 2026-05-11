@@ -22,9 +22,6 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install system tkinter
-        # customtkinter imports tkinter, which isn't bundled with Python on Ubuntu.
-        # Our test conftest stubs it, but installing the real thing means the stub
-        # becomes a no-op and the test environment mirrors the Windows dev setup.
         run: sudo apt-get update && sudo apt-get install -y python3-tk
 
       - name: Install dependencies
@@ -34,6 +31,7 @@ jobs:
           pip install pytest-cov
 
       - name: Run tests with coverage
+        working-directory: Prototype
         run: python -m pytest --cov=. --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage report
@@ -41,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage.xml
+          path: Prototype/coverage.xml
