@@ -65,12 +65,14 @@ class MediaDisplayApp:
         (self.topbar, self.menu_button, self.session_toolbar_label) = UISetup.setup_topbar(self.app,
                                                                                            self.toggle_sidebar)
         (self.sidebar, self.new_case_btn, self.open_case_btn,
-         self.sidebar_platform_label, self.sidebar_add_platform_btn, self.sidebar_manage_platforms_btn) = \
-            UISetup.setup_sidebar(
-                self.app, self.on_new_case, self.on_open_case,
-                on_add_platform=self._open_add_platform_wizard,
-                on_manage_platforms=self._open_manage_platforms
-            )
+         self.sidebar_platform_label, self.sidebar_add_platform_btn,
+         self.sidebar_manage_platforms_btn) = UISetup.setup_sidebar(
+            self.app,
+            self.on_new_case,
+            self.on_open_case,
+            on_add_platform=self._open_add_platform_wizard,
+            on_manage_platforms=self._open_manage_platforms,
+        )
         self.sidebar_visible = False
 
         # Recording
@@ -93,6 +95,10 @@ class MediaDisplayApp:
             UISetup.setup_left_panel(main_frame, self.on_folder_select)
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
+
+        self.middle_panel.configure(width=360, height=460)
+        self.middle_panel.pack_propagate(False) if hasattr(self.middle_panel, "pack_propagate") else None
+        self.middle_panel.grid_propagate(False)
 
         (self.right_panel, self.video_border_frame, self.video_canvas, self.right_status_label,
          self.close_app_button, self.record_button, self.recording_timer_label) = UISetup.setup_right_panel(main_frame)
@@ -204,11 +210,12 @@ class MediaDisplayApp:
         )
         self.session_status_label.pack(pady=(0, 5))
 
-        # Reveal platform buttons in sidebar after login
+        # Reveal toolbar buttons that should only be available after login
         if self.session.officer_name:
-            self.sidebar_platform_label.pack(fill="x", padx=10, pady=(20, 2))
-            self.sidebar_add_platform_btn.pack(fill="x", padx=10, pady=(0, 5))
-            self.sidebar_manage_platforms_btn.pack(fill="x", padx=10, pady=(0, 5))
+            # Pack "Manage Platforms" first so "+ Add Platform" lands to its left
+            # (side="right" stacks right-to-left visually).
+            self.manage_platforms_button.pack(side="right", padx=(6, 0))
+            self.add_platform_button.pack(side="right", padx=(6, 0))
 
     def _open_add_platform_wizard(self):
         """Open the Add Platform wizard. Gated by an active session."""
@@ -433,6 +440,84 @@ class MediaDisplayApp:
             command=popup.destroy
         ).pack()
 
+    def _confirm_close_while_recording(self):
+        """
+        Modal popup shown when the user tries to close the app while a recording
+        is in progress. Returns one of:
+            "stop_and_close" - stop the recording cleanly, then close
+            "cancel"         - keep recording, do not close
+            "force_close"    - close immediately, recording will likely be lost
+        """
+        popup = ctk.CTkToplevel(self.app)
+        popup.title("Recording in progress")
+        popup.geometry("460x260")
+        popup.resizable(False, False)
+        popup.transient(self.app)
+        popup.grab_set()
+        popup.geometry("+{}+{}".format(
+            int(self.app.winfo_screenwidth() / 2 - 230),
+            int(self.app.winfo_screenheight() / 2 - 130)
+        ))
+
+        # Default if the user closes the popup with the X button: keep recording
+        choice = {"value": "cancel"}
+
+        ctk.CTkLabel(
+            popup,
+            text="⚠  A recording is still running",
+            font=("Arial", 15, "bold"),
+            text_color="#d94040"
+        ).pack(pady=(20, 6))
+
+        ctk.CTkLabel(
+            popup,
+            text=(
+                "Closing the app now can corrupt the video file.\n"
+                "Stop the recording first so it can be saved properly."
+            ),
+            font=("Arial", 12),
+            justify="center"
+        ).pack(pady=(0, 18))
+
+        button_row = ctk.CTkFrame(popup, fg_color="transparent")
+        button_row.pack(pady=(0, 18))
+
+        def pick(value):
+            choice["value"] = value
+            popup.destroy()
+
+        ctk.CTkButton(
+            button_row,
+            text="Stop recording & close",
+            width=170,
+            fg_color="#2f7d32",
+            hover_color="#256528",
+            command=lambda: pick("stop_and_close")
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            button_row,
+            text="Keep recording",
+            width=130,
+            command=lambda: pick("cancel")
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            popup,
+            text="Force close (video will be lost)",
+            width=240,
+            fg_color="#5a1f1f",
+            hover_color="#4a1818",
+            command=lambda: pick("force_close")
+        ).pack(pady=(0, 12))
+
+        # Treat the window X as "Keep recording" — safest default
+        popup.protocol("WM_DELETE_WINDOW", lambda: pick("cancel"))
+
+        # Block until the user picks something
+        self.app.wait_window(popup)
+        return choice["value"]
+
     def on_device_selected(self, device):
         self.selected_device = device
         self.add_device_status()
@@ -468,6 +553,44 @@ class MediaDisplayApp:
 
     def run(self):
         def on_close():
+            # If a recording is running, force the user to make a conscious choice
+            # before tearing anything down. Otherwise ffmpeg gets killed mid-write
+            # and the video is unusable.
+            if self.recording_manager.is_recording():
+                choice = self._confirm_close_while_recording()
+
+                if choice == "cancel":
+                    # User wants to keep recording — abort the close entirely
+                    print("[+] Close cancelled, recording continues")
+                    return
+
+                if choice == "stop_and_close":
+                    print("[+] Stopping recording before close...")
+                    try:
+                        self.recording_manager.stop_recording()
+                    except Exception as e:
+                        print(f"[ERROR] Failed to stop recording cleanly on close: {e}")
+                        show_toast(
+                            self.app,
+                            "Recording stop failed - check the case folder for the .mkv temp file",
+                            fg_color="#d94040",
+                            duration=4000
+                        )
+
+                    # Cancel the timer so it doesn't tick into a destroyed window
+                    if self._recording_timer_after_id is not None:
+                        try:
+                            self.app.after_cancel(self._recording_timer_after_id)
+                        except Exception:
+                            pass
+                        self._recording_timer_after_id = None
+
+                elif choice == "force_close":
+                    print("[!] Force close requested - recording will be lost")
+                    # Fall through to the rest of teardown without stopping ffmpeg
+                    # gracefully. The process will die with the parent.
+
+            # Normal teardown path
             self._stop_connection_monitor()
             if self.stream:
                 self.stream.stop()
@@ -475,12 +598,6 @@ class MediaDisplayApp:
             # Log where evidence would be saved
             if self.session:
                 print(f"[+] Session ended. Evidence path: {self.session.get_evidence_path()}")
-
-            if self.recording_manager.is_recording():
-                try:
-                    self.recording_manager.stop_recording()
-                except Exception as e:
-                    print(f"[ERROR] Failed to stop recording on close: {e}")
 
             stop_adb_server()
             self.app.destroy()
