@@ -36,10 +36,10 @@ class UISetup:
     def create_main_frame(parent):
         main_frame = ctk.CTkFrame(parent)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        main_frame.grid_columnconfigure(0, weight=2)
-        main_frame.grid_columnconfigure(1, weight=1)
-        main_frame.grid_columnconfigure(2, weight=2)
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=4)
         main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(1, weight=1)
 
         return main_frame
 
@@ -102,7 +102,7 @@ class UISetup:
     @staticmethod
     def setup_middle_panel(parent, on_image_confirm_callback=None):
         middle_panel = ctk.CTkFrame(parent)
-        middle_panel.grid(row=0, column=1, sticky="nsew", padx=5)
+        middle_panel.grid(row=1, column=0, sticky="nsew", padx=(0, 5))
 
         info_label = ctk.CTkLabel(
             middle_panel,
@@ -125,7 +125,7 @@ class UISetup:
     @staticmethod
     def setup_right_panel(parent):
         right_panel = ctk.CTkFrame(parent)
-        right_panel.grid(row=0, column=2, sticky="nsew", padx=(5, 0))
+        right_panel.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=(5, 0))
 
         header_frame = ctk.CTkFrame(right_panel, fg_color="transparent")
         header_frame.pack(fill="x", padx=10, pady=(10, 5))
@@ -196,7 +196,7 @@ class UISetup:
         record_button.pack(pady=(0, 5))
 
         return right_panel, video_border_frame, video_canvas, status_label, close_app_button, record_button, recording_timer_label
-    
+
     @staticmethod
     def setup_topbar(parent, on_menu_click):
         topbar = ctk.CTkFrame(
@@ -231,7 +231,7 @@ class UISetup:
         return topbar, menu_button, session_label
 
     @staticmethod
-    def setup_sidebar(parent, on_new_case, on_open_case):
+    def setup_sidebar(parent, on_new_case, on_open_case, on_add_platform=None, on_manage_platforms=None):
         sidebar = ctk.CTkFrame(
             parent,
             width=220,
@@ -244,7 +244,7 @@ class UISetup:
             text="New Case",
             command=on_new_case
         )
-        new_case_btn.pack(fill="x", padx=10, pady=(15,5))
+        new_case_btn.pack(fill="x", padx=10, pady=(15, 5))
 
         open_case_btn = ctk.CTkButton(
             sidebar,
@@ -253,11 +253,34 @@ class UISetup:
         )
         open_case_btn.pack(fill="x", padx=10, pady=5)
 
+        # Divider label for platform section
+        platform_section_label = ctk.CTkLabel(
+            sidebar,
+            text="PLATFORMS",
+            font=("Arial", 10),
+            text_color="gray50"
+        )
+        # Hidden until login — revealed by main.py after session starts
+        # platform_section_label.pack(...)
+
+        add_platform_btn = ctk.CTkButton(
+            sidebar,
+            text="+ Add Platform",
+            command=on_add_platform
+        )
+        # Hidden until login
+
+        manage_platforms_btn = ctk.CTkButton(
+            sidebar,
+            text="Manage Platforms",
+            command=on_manage_platforms
+        )
+        # Hidden until login
+
         settings_btn = ctk.CTkButton(
             sidebar,
             text="Settings"
         )
-        settings_btn.pack(fill="x", padx=10, pady=(25,5))
+        settings_btn.pack(fill="x", padx=10, pady=(25, 5))
 
-
-        return sidebar, new_case_btn, open_case_btn
+        return sidebar, new_case_btn, open_case_btn, platform_section_label, add_platform_btn, manage_platforms_btn
