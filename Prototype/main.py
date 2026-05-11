@@ -77,8 +77,6 @@ class MediaDisplayApp:
         # Recording
         self.recording_manager = RecordingManager()
         self._recording_resize_after_id = None
-        self.app.bind("<Configure>", self.on_window_configure)
-        self._last_sent_crop = None
         self._recording_start_time = None
         self._recording_timer_after_id = None
 
@@ -110,9 +108,51 @@ class MediaDisplayApp:
         self.add_platform_status()
         
     def on_new_case(self):
-        CaseManager(self.app)._show_case_selection_screen()
+            self.change_case(success_message="New case selected")
+        
     def on_open_case(self):
-        CaseManager(self.app)._show_case_selection_screen()
+        self.change_case(success_message="Case changed")
+
+    def change_case(self, success_message="Case changed"):
+        if not self.session:
+            print("[!] Cannot change case: no active session")
+            return
+
+        old_case = self.session.case_number
+
+        new_session = CaseManager(self.app).select_case_for_current_officer(
+            self.session.officer_name
+        )
+
+        if not new_session:
+            print("[!] Case change cancelled")
+            return
+
+        self.session = new_session
+
+        self.update_toolbar_session_label()
+
+        self.app.title(
+            f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}"
+        )
+
+        if hasattr(self, "session_status_label") and self.session_status_label.winfo_exists():
+            self.session_status_label.configure(
+                text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
+            )
+
+        if self.sidebar_visible:
+            self.toggle_sidebar()
+
+        show_toast(
+            self.app,
+            f"{success_message}: {self.session.case_number}",
+            fg_color="#4A9EFF"
+        )
+
+        print(f"[+] Case changed from '{old_case}' to '{self.session.case_number}'")
+        print(f"[+] Main app session updated to case: {self.session.case_number}")
+        print(f"[+] New evidence path: {self.session.get_evidence_path()}")
 
     def toggle_sidebar(self):
         if self.sidebar_visible:
@@ -590,44 +630,6 @@ class MediaDisplayApp:
             self.info_label.configure(text=f"Recording error: {str(e)}")
             print(f"[ERROR] toggle_recording: {e}")
 
-    def on_window_configure(self, event):
-        if not self.recording_manager.is_recording():
-            return
-        if event.widget != self.app:
-            return
-        if self._recording_resize_after_id is not None:
-            try:
-                self.app.after_cancel(self._recording_resize_after_id)
-            except Exception:
-                pass
-
-        self._recording_resize_after_id = self.app.after(350, self._refresh_recording_crop)
-
-    def _refresh_recording_crop(self):
-        self._recording_resize_after_id = None
-
-        if not self.recording_manager.is_recording():
-            return
-
-        try:
-            self.app.update_idletasks()
-            x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
-
-            if w < 50 or h < 50:
-                return
-
-            new_crop = (x, y, w, h)
-
-            if self._last_sent_crop == new_crop:
-                return
-
-            print(f"[DEBUG] Auto crop refresh: x={x}, y={y}, w={w}, h={h}")
-
-            self.recording_manager.update_crop(x, y, w, h)
-            self._last_sent_crop = new_crop
-
-        except Exception as e:
-            print(f"[ERROR] Failed to refresh recording crop: {e}")
 
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
