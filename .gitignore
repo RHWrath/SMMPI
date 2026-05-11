@@ -1,2 +1,12 @@
 ﻿#all documentation
 /Docs/
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/
+.idea
+*.spec
+*output/
+Prototype/config.json
+Prototype.zip
