@@ -1,49 +1,30 @@
-﻿using SMMPI.Infrastructure.Plugins.Tools;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
+using WPFTest.Services;
+using WPFTest.ViewModels;
 
 namespace WPFTest;
 
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
-    [DllImport("kernel32.dll")]
-    static extern bool AllocConsole();
+    private PythonBackendClient? _backend;
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        AllocConsole();  // Call to open console
-        Console.WriteLine("Console opened!");
-
         try
         {
-            string slnRoot = SolutionRoot.Get();
-            string packageDir = Path.Combine(slnRoot, "./packages/old/Project/VCAM_GUI-master(3)/VCAM_GUI-master/");
-            string dependencyPath = Path.Combine(packageDir, "requirements.txt");
-
-            if (!File.Exists(dependencyPath))
-            {
-                throw new FileNotFoundException($"Python dependencies not found: {dependencyPath}");
-            }
-
-            await EnsurePipAsync(packageDir);
-            await EnsureVenvAsync(packageDir);
-            await InstallRequirementsAsync(packageDir);
-
-            var window = new MainWindow();
+            _backend = new PythonBackendClient();
+            var viewModel = new MainWindowViewModel(_backend, new FolderBrowserPicker(), new ThumbnailService());
+            var window = new MainWindow(viewModel);
             window.Show();
+            await viewModel.InitializeAsync();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                $"Startup failed:\n{ex.Message}",
-                "Startup error",
+            System.Windows.MessageBox.Show(
+                $"Opstarten mislukt:\n{ex.Message}",
+                "Opstartfout",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
 
@@ -51,60 +32,13 @@ public partial class App : Application
         }
     }
 
-    private static string GetVenvPython(string workingDir)
+    protected override async void OnExit(ExitEventArgs e)
     {
-        return Path.Combine(workingDir, ".venv", "Scripts", "python.exe");
-    }
-
-    private static async Task EnsureVenvAsync(string workingDir)
-    {
-        string venvPython = GetVenvPython(workingDir);
-
-        if (File.Exists(venvPython))
+        if (_backend is not null)
         {
-            Console.WriteLine("Virtual environment already exists.");
-            return;
+            await _backend.DisposeAsync();
         }
 
-        Console.WriteLine("Creating virtual environment...");
-        await ProcessHandler.RunProcessCheckedAsync(
-            "python",
-            "-m venv .venv",
-            workingDir);
-    }
-
-    private static async Task EnsurePipAsync(string workingDir)
-    {
-        Console.WriteLine("Checking whether pip is available...");
-
-        bool hasPip = await ProcessHandler.TryRunProcessAsync(
-            "python",
-            "-m pip --version",
-            workingDir);
-
-        if (hasPip)
-        {
-            Console.WriteLine("pip is already installed.");
-            return;
-        }
-
-        Console.WriteLine("pip not found. Running ensurepip...");
-        await ProcessHandler.RunProcessCheckedAsync(
-            "python",
-            "-m ensurepip --upgrade",
-            workingDir);
-    }
-
-    private static async Task InstallRequirementsAsync(string dependencyPath)
-    {
-
-        string venvPython = GetVenvPython(dependencyPath);
-
-        Console.WriteLine("Installing dependencies");
-
-        await ProcessHandler.RunProcessCheckedAsync(
-           venvPython,
-           "-m pip install -r requirements.txt",
-           dependencyPath);
+        base.OnExit(e);
     }
 }

@@ -16,3 +16,13 @@
 
 .idea
 .env
+
+# Prototype runtime: keep source/runtime assets needed for clean startup,
+# ignore generated environments, caches, and archived handover material.
+packages/old/
+packages/Prototype/.venv/
+packages/Prototype/.wpf_backend_requirements_installed
+packages/Prototype/__pycache__/
+packages/Prototype/**/*.pyc
+packages/Prototype/dist/
+packages/Prototype/build/

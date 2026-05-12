@@ -20,4 +20,10 @@
     <Using Include="NUnit.Framework" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\SMMPI.Application\SMMPI.Application.csproj" />
+    <ProjectReference Include="..\..\src\Core\SMMPI.Domain\SMMPI.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\SMMPI.Infrastructure.Adb\SMMPI.Infrastructure.Adb.csproj" />
+  </ItemGroup>
+
 </Project>
