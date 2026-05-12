@@ -1,55 +1,80 @@
-﻿using System;
+using System;
 using System.IO;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Layers.Persistence.Models; //hierbij wordt de verwijzing naar de Normalisator alvast gemaakt, dit zorgt dat deze code al klaar is om de data die uit de JSON file wordt gehaald door te sturen naar de Normalisator.
-
-//Logisch dat nu nog de "Output folder", "Input folder" en de files die genaamd worden placeholder names hebben.
-//deze worden op termijn aangepast.
+using Layers.Persistence.Models; // Hierbij wordt de verwijzing naar de Models alvast gemaakt.
 
 namespace Layers.Persistence
 {
     internal static class JSONParser
     {
-        //Functie die de Input JSON file parsed en wacht totdat dit klaar is met parsen, daarna stuurt ie deze door naar de PDF Generator.
+        // Functie die de input JSON file parsed en wacht totdat dit klaar is met parsen.
+        // Daarna kan deze data worden doorgestuurd naar de Normalisator.
 
-        private static async Task Main(string[] args) //Hierbij maken we een task die wacht totdat het parsen van de JSON klaar is, voordat deze verder gaat met de volgende stappen.
+        private static async Task Main(string[] args)
         {
             await ParseJSON();
         }
-        private static async Task ParseJSON() //De task heeft de volgende structuur.
+
+        private static async Task ParseJSON()
         {
-            // Implement JSON parsing logic here
-                Console.WriteLine("Grabbing input JSON from Evidence Repository...");
-                //Read JSON file from the input folder and store it in a variable.
-                    string RAW_JSON = File.ReadAllText("FOLDER/INPUT.JSON"); //Hierbij wordt de JSON file gelezen en opgeslagen als een Variabele, deze variabele is een string array omdat er meerdere JSON files kunnen zijn in de input folder.
+            Console.WriteLine("Grabbing input JSON from Evidence Repository...");
 
-            DiscordExport? export = JsonConvert.DeserializeObject<DiscordExport>(RAW_JSON); //Hierbij wordt de JSON file geparst en opgeslagen als een DiscordExport object.
+            string inputFilePath = "FOLDER/INPUT.JSON";
 
-            if (export == null) //Als de export leeg is of niet bestaat, dan krijg je een foutmelding.
+            if (!File.Exists(inputFilePath))
             {
-                Console.WriteLine("Export is empty or doesn't exist.");
+                Console.WriteLine("Input JSON file doesn't exist.");
+                return;
+            }
+
+            // Read JSON file from the input folder and store it in a string variable.
+            string RAW_JSON = await File.ReadAllTextAsync(inputFilePath);
+
+            if (string.IsNullOrWhiteSpace(RAW_JSON))
+            {
+                Console.WriteLine("Input JSON file is empty.");
+                return;
+            }
+
+            DiscordExport? export = JsonConvert.DeserializeObject<DiscordExport>(RAW_JSON);
+
+            if (export == null)
+            {
+                Console.WriteLine("Export is empty or couldn't be parsed.");
+                return;
+            }
+
+            if (export.Messages == null || export.Messages.Count == 0)
+            {
+                Console.WriteLine("Export contains no messages.");
                 return;
             }
 
             Console.WriteLine("JSON Parsing Complete.");
             Console.WriteLine("Sending parsed JSON to Normalisator...");
 
-            //Deel 1 van de structuur, het inlezen van de JSON file, het parsen van de inhoud en een nacontrole invoeren of dit juist gedaan is.
+            // Deel 1: het inlezen van de JSON file, het parsen van de inhoud
+            // en een nacontrole uitvoeren of dit juist gedaan is.
 
             //________________________________________________________________
 
-            //Normalisator.
+            // Normalisator.
+            // Hier wordt de geparste data voorlopig gecontroleerd via Console output.
+            // Later kan hier de echte Normalisator worden aangeroepen.
 
-            //Stuur deze variable door naar de Normalisator
             foreach (var message in export.Messages)
             {
-                Console.WriteLine($"[{message.Timestamp}] {message.Author?.Nickname}: {message.Content}");
+                string timestamp = message.Timestamp?.ToString() ?? "No timestamp";
+                string author = message.Author?.Nickname ?? "Unknown author";
+                string content = message.Content ?? "No content";
+
+                Console.WriteLine($"[{timestamp}] {author}: {content}");
             }
 
             Console.WriteLine("Done.");
 
-            //Deel 2 van de structuur, het doorsturen van de geparste JSON naar de Normalisator.css. 
+            // Deel 2: het doorsturen van de geparste JSON naar de Normalisator.cs.
 
             //________________________________________________________________
         }
