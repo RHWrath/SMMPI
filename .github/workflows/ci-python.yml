@@ -1,0 +1,32 @@
+name: CI Pipeline (Python)
+
+on:
+  push:
+    branches:
+      - FHICT-Parttime-Release
+      - FHICT-Parttime-Dev
+
+  pull_request:
+    branches:
+      - FHICT-Parttime-Release
+      - FHICT-Parttime-Dev
+
+jobs:
+  python-tests:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python test dependencies
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Run Python tests
+        run: python -m pytest
+        working-directory: Prototype
