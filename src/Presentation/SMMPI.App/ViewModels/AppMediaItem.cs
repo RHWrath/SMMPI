@@ -1,4 +1,4 @@
-namespace WPFTest.ViewModels;
+namespace SMMPI.App.ViewModels;
 
 /// <summary>
 /// Describes the media categories the WPF shell needs to display and send.

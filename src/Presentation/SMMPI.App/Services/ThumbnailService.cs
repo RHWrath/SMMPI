@@ -1,10 +1,10 @@
-using System.IO;
 using System.Diagnostics;
+using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WPFTest.ViewModels;
+using SMMPI.App.ViewModels;
 
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 /// <summary>
 /// Creates still-image thumbnails for the media explorer and decodes stream frames for display.
@@ -25,19 +25,40 @@ public sealed class ThumbnailService
             return null;
         }
 
-        return LoadImage(path);
+        return LoadImage(path, decodeMaxWidth: 320);
+    }
+
+    /// <summary>
+    /// Creates a larger preview image for the selected media item without reusing the small explorer thumbnail.
+    /// </summary>
+    public async Task<ImageSource?> CreatePreviewAsync(AppMediaItem item, CancellationToken cancellationToken)
+    {
+        var path = item.Type == AppMediaType.Video
+            ? await ExtractVideoFrameAsync(item.Path, cancellationToken)
+            : item.Path;
+
+        if (path is null || !File.Exists(path))
+        {
+            return null;
+        }
+
+        return LoadImage(path, decodeMaxWidth: 1400);
     }
 
     /// <summary>
     /// Loads an image file into a frozen WPF image source suitable for binding.
     /// </summary>
-    public static ImageSource? LoadImage(string path)
+    public static ImageSource? LoadImage(string path, int? decodeMaxWidth = null)
     {
         var image = new BitmapImage();
         image.BeginInit();
         image.CacheOption = BitmapCacheOption.OnLoad;
         image.UriSource = new Uri(path);
-        image.DecodePixelWidth = 320;
+        if (decodeMaxWidth is > 0)
+        {
+            image.DecodePixelWidth = decodeMaxWidth.Value;
+        }
+
         image.EndInit();
         image.Freeze();
         return image;

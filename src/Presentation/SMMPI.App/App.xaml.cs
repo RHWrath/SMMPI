@@ -1,8 +1,8 @@
 using System.Windows;
-using WPFTest.Services;
-using WPFTest.ViewModels;
+using SMMPI.App.Services;
+using SMMPI.App.ViewModels;
 
-namespace WPFTest;
+namespace SMMPI.App;
 
 public partial class App : System.Windows.Application
 {
@@ -16,7 +16,7 @@ public partial class App : System.Windows.Application
         {
             _backend = new PythonBackendClient();
             var viewModel = new MainWindowViewModel(_backend, new FolderBrowserPicker(), new ThumbnailService());
-            var window = new MainWindow(viewModel);
+            var window = new SMMPI.App.MainWindow(viewModel);
             window.Show();
             await viewModel.InitializeAsync();
         }

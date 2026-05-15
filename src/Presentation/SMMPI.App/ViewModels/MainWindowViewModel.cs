@@ -1,14 +1,15 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Channels;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using WPFTest.Commands;
-using WPFTest.Services;
+using SMMPI.App.Commands;
+using SMMPI.App.Services;
 
-namespace WPFTest.ViewModels;
+namespace SMMPI.App.ViewModels;
 
 /// <summary>
 /// Coordinates the WPF shell with the Python backend while exposing bindable state to the main window.
@@ -32,13 +33,13 @@ public sealed class MainWindowViewModel : ObservableObject
     private int _latestFrameWidth;
     private int _latestFrameHeight;
     private string _mediaLibraryFolder = "";
-    private string _caseLogFolder = "";
+    private string _caseLogFolder = GetDefaultCaseRoot();
     private string _connectionStatus = "niet verbonden";
     private string _deviceName = "-";
     private string _activeApp = "-";
     private string _statusMessage = "Starten...";
-    private string _officerName = "-";
-    private string _caseNumber = "-";
+    private string _officerName = "";
+    private string _caseNumber = "";
     private bool _isRecording;
     private int _busyCount;
     private long _lastMoveSendTicks;
@@ -79,13 +80,13 @@ public sealed class MainWindowViewModel : ObservableObject
     public string OfficerName
     {
         get => _officerName;
-        private set => SetProperty(ref _officerName, value);
+        set => SetProperty(ref _officerName, value);
     }
 
     public string CaseNumber
     {
         get => _caseNumber;
-        private set => SetProperty(ref _caseNumber, value);
+        set => SetProperty(ref _caseNumber, value);
     }
 
     public string MediaLibraryFolder
@@ -161,7 +162,7 @@ public sealed class MainWindowViewModel : ObservableObject
         : System.Windows.Input.Cursors.Arrow;
 
     /// <summary>
-    /// Starts the Python backend, opens the session prompt, starts ADB, and attempts initial device connection.
+    /// Starts the Python backend, starts ADB, and attempts initial device connection without requiring case details.
     /// </summary>
     public async Task InitializeAsync()
     {
@@ -169,25 +170,6 @@ public sealed class MainWindowViewModel : ObservableObject
         StatusMessage = "Python-backend starten...";
         await _backend.StartAsync(_shutdown.Token);
         await _backend.SendAsync("start_adb", cancellationToken: _shutdown.Token);
-
-        var prompt = new SessionPrompt { Owner = System.Windows.Application.Current.MainWindow };
-        if (prompt.ShowDialog() == true && prompt.Result is not null)
-        {
-            var result = prompt.Result;
-            var response = await _backend.SendAsync(
-                "start_session",
-                new { officerName = result.OfficerName, caseNumber = result.CaseNumber, caseRoot = result.CaseRoot },
-                _shutdown.Token);
-            var session = response.GetProperty("session");
-            OfficerName = session.GetProperty("officerName").GetString() ?? result.OfficerName;
-            CaseNumber = session.GetProperty("caseNumber").GetString() ?? result.CaseNumber;
-            CaseLogFolder = session.GetProperty("casePath").GetString() ?? result.CaseRoot;
-        }
-        else
-        {
-            StatusMessage = "Sessie starten geannuleerd.";
-            return;
-        }
 
         await RefreshDeviceAsync();
     }
@@ -305,6 +287,10 @@ public sealed class MainWindowViewModel : ObservableObject
                 width = (int)Math.Max(2, captureRect.Width),
                 height = (int)Math.Max(2, captureRect.Height),
                 windowTitle,
+                officerName = NormalizeOptionalText(OfficerName),
+                caseNumber = NormalizeOptionalText(CaseNumber),
+                caseRoot = GetCaseRoot(),
+                caseFolder = GetRecordingFolder(),
             },
             _shutdown.Token);
         _isRecording = true;
@@ -368,12 +354,65 @@ public sealed class MainWindowViewModel : ObservableObject
     /// </summary>
     private void BrowseCaseLogFolder()
     {
-        var folder = _folderPicker.PickFolder("Selecteer zaakmap");
+        var folder = _folderPicker.PickFolder("Selecteer hoofdmap voor zaken en opnames");
         if (folder is not null)
         {
             CaseLogFolder = folder;
-            StatusMessage = $"Zaakmapweergave ingesteld op {folder}. Nieuw bewijs volgt nog steeds de actieve Python-sessie.";
+            StatusMessage = $"Zaakmap ingesteld op {folder}.";
         }
+    }
+
+    /// <summary>
+    /// Returns the root folder used for case data, falling back to the current user's desktop.
+    /// </summary>
+    private string GetCaseRoot() =>
+        string.IsNullOrWhiteSpace(CaseLogFolder) ? GetDefaultCaseRoot() : CaseLogFolder;
+
+    /// <summary>
+    /// Resolves the folder where recordings should be written even when no case is filled in.
+    /// </summary>
+    private string GetRecordingFolder()
+    {
+        var root = GetCaseRoot();
+        var caseNumber = NormalizeOptionalText(CaseNumber);
+        return caseNumber is null ? root : Path.Combine(root, SanitizePathSegment(caseNumber));
+    }
+
+    /// <summary>
+    /// Returns trimmed user text or null when the field has no meaningful value.
+    /// </summary>
+    private static string? NormalizeOptionalText(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+    }
+
+    /// <summary>
+    /// Removes characters that cannot be used in a Windows folder name.
+    /// </summary>
+    private static string SanitizePathSegment(string value)
+    {
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            value = value.Replace(invalid, '_');
+        }
+
+        return value;
+    }
+
+    /// <summary>
+    /// Gets the current user's desktop folder without depending on a hardcoded path.
+    /// </summary>
+    private static string GetDefaultCaseRoot()
+    {
+        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        if (!string.IsNullOrWhiteSpace(desktop))
+        {
+            return desktop;
+        }
+
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return string.IsNullOrWhiteSpace(profile) ? Environment.CurrentDirectory : Path.Combine(profile, "Desktop");
     }
 
     /// <summary>
@@ -468,7 +507,7 @@ public sealed class MainWindowViewModel : ObservableObject
         using var _ = BeginBusy();
         SelectedPreview = SelectedMedia is null
             ? null
-            : await _thumbnailService.CreateThumbnailAsync(SelectedMedia.Media, _shutdown.Token);
+            : await _thumbnailService.CreatePreviewAsync(SelectedMedia.Media, _shutdown.Token);
     }
 
     /// <summary>

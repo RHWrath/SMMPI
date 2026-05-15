@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 /// <summary>
 /// Owns the local Python backend process and the two socket connections used by the WPF frontend.

@@ -1,0 +1,72 @@
+<UserControl x:Class="SMMPI.App.Views.PhoneStreamPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Background="Transparent"
+            BorderBrush="#FFB0B0B0"
+            BorderThickness="2"
+            CornerRadius="12"
+            Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock FontSize="22" Text="Telefoonstream" />
+                    <TextBlock Margin="0,6,0,0"
+                               Opacity="0.75"
+                               Text="{Binding StatusMessage}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Stream verversen"
+                            Command="{Binding RefreshDeviceCommand}"
+                            MinWidth="120" />
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="2"
+                    BorderBrush="#FF4A4A4A"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    MinHeight="320"
+                    Background="{DynamicResource Theme_BackgroundBrush}">
+                <Grid>
+                    <Image x:Name="StreamImage"
+                           Source="{Binding StreamImage}"
+                           Stretch="Uniform"
+                           Focusable="True"
+                           IsEnabled="{Binding CanSendDeviceKeyboard}"
+                           KeyboardNavigation.TabNavigation="Once"
+                           PreviewKeyDown="StreamImage_PreviewKeyDown"
+                           PreviewTextInput="StreamImage_PreviewTextInput"
+                           MouseLeftButtonDown="StreamImage_MouseLeftButtonDown"
+                           MouseMove="StreamImage_MouseMove"
+                           MouseLeftButtonUp="StreamImage_MouseLeftButtonUp" />
+                    <TextBlock HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="18"
+                               Opacity="0.55"
+                               Text="Wachten op telefoonstream">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StreamImage}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>
