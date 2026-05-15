@@ -8,45 +8,35 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Background="Transparent"
-                BorderBrush="#FFB0B0B0"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="16">
+        <Border Grid.Row="0" Style="{StaticResource PanelCard}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
-                           Text="Instellingen"
-                           FontSize="18"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center" />
+                           Style="{StaticResource SectionTitle}"
+                           Text="Instellingen" />
                 <StackPanel Grid.Row="1" Margin="0,20,0,0" VerticalAlignment="Top">
-                    <TextBlock Text="Medewerker" FontSize="14" Margin="0,0,0,6" />
-                    <TextBox Height="32"
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Medewerker" />
+                    <TextBox Height="36"
                              Margin="0,0,0,12"
-                             VerticalContentAlignment="Center"
                              Text="{Binding OfficerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Text="Zaaknummer" FontSize="14" Margin="0,0,0,6" />
-                    <TextBox Height="32"
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Zaaknummer" />
+                    <TextBox Height="36"
                              Margin="0,0,0,16"
-                             VerticalContentAlignment="Center"
                              Text="{Binding CaseNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Text="Media folder" FontSize="14" Margin="0,0,0,6" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Media folder" />
                     <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0"
-                                 Height="32"
+                                 Height="36"
                                  Margin="0,0,10,0"
-                                 VerticalContentAlignment="Center"
                                  IsReadOnly="True"
                                  Text="{Binding MediaLibraryFolder, Mode=OneWay}" />
                         <Button Grid.Column="1"
@@ -55,16 +45,15 @@
                                 MinWidth="96" />
                     </Grid>
 
-                    <TextBlock Text="Zaakmap" FontSize="14" Margin="0,0,0,6" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Zaakmap" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0"
-                                 Height="32"
+                                 Height="36"
                                  Margin="0,0,10,0"
-                                 VerticalContentAlignment="Center"
                                  IsReadOnly="True"
                                  Text="{Binding CaseLogFolder, Mode=OneWay}" />
                         <Button Grid.Column="1"
@@ -86,20 +75,12 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2"
-                Background="Transparent"
-                BorderBrush="#FFB0B0B0"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="16">
+        <Border Grid.Row="2" Style="{StaticResource PanelCard}">
             <StackPanel>
-                <TextBlock FontSize="18"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Text="Telefoonstatus" />
-                <TextBlock Margin="0,12,0,0" Text="{Binding ConnectionStatus, StringFormat=Verbinding: {0}}" />
-                <TextBlock Margin="0,4,0,0" Text="{Binding DeviceName, StringFormat=Telefoon: {0}}" />
-                <TextBlock Margin="0,4,0,0" Text="{Binding ActiveApp, StringFormat=Actieve app: {0}}" />
+                <TextBlock Style="{StaticResource SectionTitle}" Text="Telefoonstatus" />
+                <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding ConnectionStatus, StringFormat=Verbinding: {0}}" />
+                <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding DeviceName, StringFormat=Telefoon: {0}}" />
+                <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding ActiveApp, StringFormat=Actieve app: {0}}" />
             </StackPanel>
         </Border>
     </Grid>

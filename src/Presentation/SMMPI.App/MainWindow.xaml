@@ -9,13 +9,13 @@
         Title="SMMPI Operator"
         Width="1600"
         Height="900"
-        MinWidth="1200"
+        MinWidth="1400"
         MinHeight="720"
         Foreground="{DynamicResource Theme_TextBrush}"
         Cursor="{Binding AppCursor}"
         d:DataContext="{d:DesignInstance Type=viewModels:MainWindowViewModel}">
 
-    <Grid Margin="24">
+    <Grid Margin="20">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="0.75*" />
             <ColumnDefinition Width="12" />

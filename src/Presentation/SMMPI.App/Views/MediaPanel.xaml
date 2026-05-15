@@ -9,11 +9,33 @@
             <Setter Property="Margin" Value="4" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Foreground" Value="{DynamicResource Theme_TextBrush}" />
-            <Setter Property="Background" Value="#FFF0F0F0" />
-            <Setter Property="BorderBrush" Value="#FF6E6E6E" />
+            <Setter Property="Background" Value="{DynamicResource Theme_SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Theme_BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Theme_AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#FFEFF6FF" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Theme_AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -24,29 +46,20 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Background="Transparent"
-                BorderBrush="#FFB0B0B0"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="16">
+        <Border Grid.Row="0" Style="{StaticResource PanelCard}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
+                           Style="{StaticResource SectionTitle}"
                            Text="Media"
-                           FontSize="18"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
                            Margin="0,0,0,12" />
                 <Border Grid.Row="1"
-                        BorderBrush="#FF4A4A4A"
-                        BorderThickness="1"
-                        CornerRadius="8"
+                        Style="{StaticResource InnerSurface}"
                         Padding="8"
-                        Background="{DynamicResource Theme_BackgroundBrush}">
+                        ClipToBounds="True">
                     <ListBox ItemsSource="{Binding MediaItems}"
                              SelectedItem="{Binding SelectedMedia}"
                              ItemContainerStyle="{StaticResource ThumbTile}"
@@ -65,7 +78,7 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
-                                    <Border Grid.Row="0" Background="#FF2A2A2A" CornerRadius="6">
+                                    <Border Grid.Row="0" Background="#FFE9EEF5" CornerRadius="6">
                                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                                     </Border>
                                     <TextBlock Grid.Row="1"
@@ -81,12 +94,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2"
-                Background="Transparent"
-                BorderBrush="#FFB0B0B0"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="16">
+        <Border Grid.Row="2" Style="{StaticResource PanelCard}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -94,23 +102,18 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
+                           Style="{StaticResource SectionTitle}"
                            Text="Mediavoorbeeld"
-                           FontSize="18"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
                            Margin="0,0,0,10" />
                 <Border Grid.Row="1"
-                        BorderBrush="#FF4A4A4A"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Background="{DynamicResource Theme_BackgroundBrush}">
+                        Style="{StaticResource InnerSurface}">
                     <Grid>
                         <Image Source="{Binding SelectedPreview}"
                                Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   Opacity="0.6"
+                                   Foreground="{DynamicResource Theme_MutedTextBrush}"
                                    Text="Voorbeeld geselecteerd bestand">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -131,8 +134,8 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
-                        <TextBlock Opacity="0.9" Text="{Binding SelectedFileName, StringFormat=Geselecteerd: {0}}" />
-                        <TextBlock Margin="0,4,0,0" Opacity="0.85" Text="{Binding SelectedFileType, StringFormat=Type: {0}}" />
+                        <TextBlock Foreground="{DynamicResource Theme_TextBrush}" Text="{Binding SelectedFileName, StringFormat=Geselecteerd: {0}}" />
+                        <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding SelectedFileType, StringFormat=Type: {0}}" />
                     </StackPanel>
                     <Button Grid.Column="1"
                             Content="Naar telefoon sturen"
