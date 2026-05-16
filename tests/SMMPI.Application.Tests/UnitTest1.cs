@@ -104,6 +104,16 @@ public class Tests
     }
 
     [Test]
+    public void AdbPlatformDetectionService_ParsesResumedActivityPackage()
+    {
+        const string dumpsys = "  ResumedActivity: ActivityRecord{abc u0 com.snapchat.android/.LandingActivity t12}";
+
+        var packageName = AdbPlatformDetectionService.ParseForegroundPackage(dumpsys);
+
+        Assert.That(packageName, Is.EqualTo("com.snapchat.android"));
+    }
+
+    [Test]
     public void JpegSizeReader_ReadsBaselineSofDimensions()
     {
         // Minimal JPEG: SOF0 with 1x1 dimensions (remaining bytes are filler to satisfy length field).

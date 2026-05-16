@@ -1,4 +1,9 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using SMMPI.Application.Services;
+using SMMPI.Domain.Interfaces;
+using SMMPI.Infrastructure.Adb;
+using SMMPI.Infrastructure.Logging;
 using WPFTest.Services;
 using WPFTest.ViewModels;
 
@@ -6,7 +11,7 @@ namespace WPFTest;
 
 public partial class App : System.Windows.Application
 {
-    private PythonBackendClient? _backend;
+    private ServiceProvider? _services;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -14,8 +19,8 @@ public partial class App : System.Windows.Application
 
         try
         {
-            _backend = new PythonBackendClient();
-            var viewModel = new MainWindowViewModel(_backend, new FolderBrowserPicker(), new ThumbnailService());
+            _services = ConfigureServices();
+            var viewModel = _services.GetRequiredService<MainWindowViewModel>();
             var window = new MainWindow(viewModel);
             window.Show();
             await viewModel.InitializeAsync();
@@ -34,11 +39,33 @@ public partial class App : System.Windows.Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
-        if (_backend is not null)
+        if (_services is not null)
         {
-            await _backend.DisposeAsync();
+            await _services.DisposeAsync();
         }
 
         base.OnExit(e);
+    }
+
+    private static ServiceProvider ConfigureServices()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IAdbClient, AdbService>();
+        services.AddSingleton<IAndroidAppService, AndroidAppService>();
+        services.AddSingleton<IPlatformDetectionService, AdbPlatformDetectionService>();
+        services.AddSingleton<IDeviceStreamService, AdbH264MjpegStreamService>();
+        services.AddSingleton<IMediaPipeline, FfmpegMediaPipeline>();
+        services.AddSingleton<ISessionLogService, FileSessionLogService>();
+        services.AddSingleton<IDeviceController, DeviceController>();
+        services.AddSingleton<IMediaLibraryService, MediaLibraryService>();
+
+        services.AddSingleton<IFolderPicker, FolderBrowserPicker>();
+        services.AddSingleton<ThumbnailService>();
+        services.AddSingleton<PythonBackendClient>();
+        services.AddSingleton<ILegacyRecordingService, LegacyPythonRecordingService>();
+        services.AddTransient<MainWindowViewModel>();
+
+        return services.BuildServiceProvider();
     }
 }

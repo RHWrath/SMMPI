@@ -1,25 +1,36 @@
 using System.Collections.ObjectModel;
-using System.Text.Json;
+using System.IO;
 using System.Threading.Channels;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using SMMPI.Domain.Entities;
+using SMMPI.Domain.Enums;
+using SMMPI.Domain.Interfaces;
 using WPFTest.Commands;
 using WPFTest.Services;
+using DomainMediaItem = SMMPI.Domain.Entities.MediaItem;
+using DomainMediaType = SMMPI.Domain.Enums.MediaType;
+using DomainTouchAction = SMMPI.Domain.Enums.TouchAction;
 
 namespace WPFTest.ViewModels;
 
 /// <summary>
-/// Coordinates the WPF shell with the Python backend while exposing bindable state to the main window.
+/// Coordinates the WPF shell with application services while exposing bindable state to the main window.
 /// </summary>
 public sealed class MainWindowViewModel : ObservableObject
 {
-    private readonly PythonBackendClient _backend;
+    private readonly IDeviceController _deviceController;
+    private readonly IDeviceStreamService _streamService;
+    private readonly IMediaLibraryService _mediaLibraryService;
+    private readonly IPlatformDetectionService _platformDetectionService;
+    private readonly IAndroidAppService _androidAppService;
+    private readonly ILegacyRecordingService _recordingService;
     private readonly IFolderPicker _folderPicker;
     private readonly ThumbnailService _thumbnailService;
     private readonly CancellationTokenSource _shutdown = new();
-    private readonly Channel<PythonStreamFrame> _frames = Channel.CreateBounded<PythonStreamFrame>(new BoundedChannelOptions(1)
+    private readonly Channel<StreamFrame> _frames = Channel.CreateBounded<StreamFrame>(new BoundedChannelOptions(1)
     {
         SingleReader = true,
         SingleWriter = false,
@@ -44,19 +55,31 @@ public sealed class MainWindowViewModel : ObservableObject
     private long _lastMoveSendTicks;
     private int _lastMoveSentX = int.MinValue;
     private int _lastMoveSentY;
+    private PlatformTarget? _activePlatform;
 
     /// <summary>
-    /// Wires backend events, frame processing, and UI commands for the main operator window.
+    /// Wires application services, frame processing, and UI commands for the main operator window.
     /// </summary>
-    public MainWindowViewModel(PythonBackendClient backend, IFolderPicker folderPicker, ThumbnailService thumbnailService)
+    public MainWindowViewModel(
+        IDeviceController deviceController,
+        IDeviceStreamService streamService,
+        IMediaLibraryService mediaLibraryService,
+        IPlatformDetectionService platformDetectionService,
+        IAndroidAppService androidAppService,
+        ILegacyRecordingService recordingService,
+        IFolderPicker folderPicker,
+        ThumbnailService thumbnailService)
     {
-        _backend = backend;
+        _deviceController = deviceController;
+        _streamService = streamService;
+        _mediaLibraryService = mediaLibraryService;
+        _platformDetectionService = platformDetectionService;
+        _androidAppService = androidAppService;
+        _recordingService = recordingService;
         _folderPicker = folderPicker;
         _thumbnailService = thumbnailService;
 
-        _backend.FrameReceived += (_, frame) => _frames.Writer.TryWrite(frame);
-        _backend.EventReceived += (_, evt) => System.Windows.Application.Current.Dispatcher.Invoke(() => HandleBackendEvent(evt));
-        _backend.LogReceived += (_, line) => System.Windows.Application.Current.Dispatcher.Invoke(() => StatusMessage = line);
+        _streamService.FrameReceived += (_, frame) => _frames.Writer.TryWrite(frame);
         _ = Task.Run(ProcessFramesAsync, _shutdown.Token);
 
         BrowseMediaFolderCommand = new AsyncRelayCommand(BrowseMediaFolderAsync);
@@ -161,27 +184,23 @@ public sealed class MainWindowViewModel : ObservableObject
         : System.Windows.Input.Cursors.Arrow;
 
     /// <summary>
-    /// Starts the Python backend, opens the session prompt, starts ADB, and attempts initial device connection.
+    /// Opens the session prompt, starts ADB, and attempts initial device connection.
     /// </summary>
     public async Task InitializeAsync()
     {
         using var _ = BeginBusy();
-        StatusMessage = "Python-backend starten...";
-        await _backend.StartAsync(_shutdown.Token);
-        await _backend.SendAsync("start_adb", cancellationToken: _shutdown.Token);
+        StatusMessage = "ADB starten...";
+        await _deviceController.EnsureAdbServerAsync(_shutdown.Token);
 
         var prompt = new SessionPrompt { Owner = System.Windows.Application.Current.MainWindow };
         if (prompt.ShowDialog() == true && prompt.Result is not null)
         {
             var result = prompt.Result;
-            var response = await _backend.SendAsync(
-                "start_session",
-                new { officerName = result.OfficerName, caseNumber = result.CaseNumber, caseRoot = result.CaseRoot },
-                _shutdown.Token);
-            var session = response.GetProperty("session");
-            OfficerName = session.GetProperty("officerName").GetString() ?? result.OfficerName;
-            CaseNumber = session.GetProperty("caseNumber").GetString() ?? result.CaseNumber;
-            CaseLogFolder = session.GetProperty("casePath").GetString() ?? result.CaseRoot;
+            OfficerName = result.OfficerName;
+            CaseNumber = result.CaseNumber;
+            CaseLogFolder = Path.Combine(result.CaseRoot, result.CaseNumber);
+            Directory.CreateDirectory(CaseLogFolder);
+            await _recordingService.StartSessionAsync(result.OfficerName, result.CaseNumber, result.CaseRoot, _shutdown.Token);
         }
         else
         {
@@ -207,7 +226,7 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Maps preview coordinates into stream-frame coordinates and forwards the touch action to Python.
+    /// Maps preview coordinates into stream-frame coordinates and forwards the touch action to the device controller.
     /// </summary>
     public async Task SendTouchFromControlAsync(double controlWidth, double controlHeight, double controlX, double controlY, DeviceTouchAction action)
     {
@@ -246,29 +265,26 @@ public sealed class MainWindowViewModel : ObservableObject
             _lastMoveSentX = int.MinValue;
         }
 
-        var name = action switch
+        var touchAction = action switch
         {
-            DeviceTouchAction.Down => "down",
-            DeviceTouchAction.Move => "move",
-            _ => "up",
+            DeviceTouchAction.Down => DomainTouchAction.Down,
+            DeviceTouchAction.Move => DomainTouchAction.Move,
+            _ => DomainTouchAction.Up,
         };
-        await _backend.SendAsync("touch", new { action = name, x, y }, _shutdown.Token);
+        await _deviceController.SendTouchAsync(touchAction, x, y, _shutdown.Token);
     }
 
     /// <summary>
-    /// Sends an Android key down/up pair through the Python scrcpy control channel.
+    /// Sends an Android key event through the C# ADB client.
     /// </summary>
-    public async Task SendAndroidKeyEventAsync(int androidKeyCode)
-    {
-        await _backend.SendAsync("keycode", new { keyCode = androidKeyCode, action = 0 }, _shutdown.Token);
-        await _backend.SendAsync("keycode", new { keyCode = androidKeyCode, action = 1 }, _shutdown.Token);
-    }
+    public Task SendAndroidKeyEventAsync(int androidKeyCode) =>
+        _deviceController.SendAndroidKeyEventAsync(androidKeyCode, _shutdown.Token);
 
     /// <summary>
-    /// Sends text input through the Python scrcpy control channel.
+    /// Sends text input through the C# ADB client.
     /// </summary>
     public Task SendAndroidTextAsync(string text) =>
-        _backend.SendAsync("text", new { text }, _shutdown.Token);
+        _deviceController.SendAndroidTextAsync(text, _shutdown.Token);
 
     /// <summary>
     /// Sends the current Windows clipboard text to the connected Android device.
@@ -289,23 +305,20 @@ public sealed class MainWindowViewModel : ObservableObject
         using var _ = BeginBusy();
         if (_isRecording)
         {
-            var response = await _backend.SendAsync("stop_recording", cancellationToken: _shutdown.Token);
+            var path = await _recordingService.StopRecordingAsync(_shutdown.Token);
             _isRecording = false;
             OnPropertyChanged(nameof(RecordButtonText));
-            StatusMessage = response.TryGetProperty("path", out var path) ? $"Opname opgeslagen: {path.GetString()}" : "Opname gestopt.";
+            StatusMessage = !string.IsNullOrWhiteSpace(path) ? $"Opname opgeslagen: {path}" : "Opname gestopt.";
             return;
         }
 
-        await _backend.SendAsync(
-            "start_recording",
-            new
-            {
-                x = (int)Math.Max(0, captureRect.X),
-                y = (int)Math.Max(0, captureRect.Y),
-                width = (int)Math.Max(2, captureRect.Width),
-                height = (int)Math.Max(2, captureRect.Height),
-                windowTitle,
-            },
+        await _recordingService.StartRecordingAsync(
+            _activePlatform?.Name ?? "UnknownPlatform",
+            (int)Math.Max(0, captureRect.X),
+            (int)Math.Max(0, captureRect.Y),
+            (int)Math.Max(2, captureRect.Width),
+            (int)Math.Max(2, captureRect.Height),
+            windowTitle,
             _shutdown.Token);
         _isRecording = true;
         OnPropertyChanged(nameof(RecordButtonText));
@@ -322,20 +335,16 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
-        await _backend.SendAsync(
-            "update_recording_crop",
-            new
-            {
-                x = (int)Math.Max(0, captureRect.X),
-                y = (int)Math.Max(0, captureRect.Y),
-                width = (int)Math.Max(2, captureRect.Width),
-                height = (int)Math.Max(2, captureRect.Height),
-            },
+        await _recordingService.UpdateRecordingCropAsync(
+            (int)Math.Max(0, captureRect.X),
+            (int)Math.Max(0, captureRect.Y),
+            (int)Math.Max(2, captureRect.Width),
+            (int)Math.Max(2, captureRect.Height),
             _shutdown.Token);
     }
 
     /// <summary>
-    /// Lets the operator choose a media folder and loads supported media files from Python.
+    /// Lets the operator choose a media folder and loads supported media files.
     /// </summary>
     private async Task BrowseMediaFolderAsync()
     {
@@ -349,13 +358,12 @@ public sealed class MainWindowViewModel : ObservableObject
         MediaLibraryFolder = folder;
         MediaItems.Clear();
         StatusMessage = "Media laden...";
-        var response = await _backend.SendAsync("scan_media", new { folder }, _shutdown.Token);
-        foreach (var item in response.GetProperty("items").EnumerateArray())
+        foreach (var item in _mediaLibraryService.ScanFolder(folder))
         {
-            var type = string.Equals(item.GetProperty("type").GetString(), "video", StringComparison.OrdinalIgnoreCase)
+            var type = item.Type == DomainMediaType.Video
                 ? AppMediaType.Video
                 : AppMediaType.Image;
-            var vm = new MediaItemViewModel(new AppMediaItem(item.GetProperty("path").GetString()!, type));
+            var vm = new MediaItemViewModel(new AppMediaItem(item.Path, type));
             MediaItems.Add(vm);
             vm.Thumbnail = await _thumbnailService.CreateThumbnailAsync(vm.Media, _shutdown.Token);
         }
@@ -372,7 +380,7 @@ public sealed class MainWindowViewModel : ObservableObject
         if (folder is not null)
         {
             CaseLogFolder = folder;
-            StatusMessage = $"Zaakmapweergave ingesteld op {folder}. Nieuw bewijs volgt nog steeds de actieve Python-sessie.";
+            StatusMessage = $"Zaakmapweergave ingesteld op {folder}.";
         }
     }
 
@@ -385,10 +393,9 @@ public sealed class MainWindowViewModel : ObservableObject
         try
         {
             StatusMessage = "Android-telefoons zoeken...";
-            var response = await _backend.SendAsync("list_devices", cancellationToken: _shutdown.Token);
-            var devices = response.GetProperty("devices").EnumerateArray().ToList();
-            var selected = devices.FirstOrDefault();
-            if (selected.ValueKind == JsonValueKind.Undefined)
+            var devices = await _deviceController.GetDevicesAsync(_shutdown.Token);
+            var selected = devices.FirstOrDefault(device => device.State == DeviceConnectionState.Connected);
+            if (selected is null)
             {
                 ConnectionStatus = "niet verbonden";
                 DeviceName = "-";
@@ -397,13 +404,11 @@ public sealed class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            var serial = selected.GetProperty("serial").GetString();
-            var connected = await _backend.SendAsync("select_device", new { serial }, _shutdown.Token);
-            var device = connected.GetProperty("device");
+            await _deviceController.ConnectAsync(selected, _shutdown.Token);
             ConnectionStatus = "verbonden (USB)";
-            DeviceName = device.GetProperty("displayName").GetString() ?? serial ?? "-";
-            StatusMessage = "Scrcpy-stream starten...";
-            await _backend.SendAsync("start_stream", new { maxSize = 1080, maxFps = 60 }, _shutdown.Token);
+            DeviceName = selected.DisplayName;
+            StatusMessage = "ADB-stream starten...";
+            await _deviceController.StartStreamAsync(_shutdown.Token);
             await RefreshActivePlatformAsync();
             RaiseCommandStates();
         }
@@ -419,16 +424,17 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Refreshes the foreground target app reported by the Python platform detector.
+    /// Refreshes the foreground target app reported by the C# ADB platform detector.
     /// </summary>
     private async Task RefreshActivePlatformAsync()
     {
         try
         {
-            var response = await _backend.SendAsync("active_platform", cancellationToken: _shutdown.Token);
-            ActiveApp = response.TryGetProperty("platform", out var platform) && platform.ValueKind == JsonValueKind.Object
-                ? platform.GetProperty("name").GetString() ?? "-"
-                : "Geen gedetecteerd";
+            var device = _deviceController.SelectedDevice;
+            _activePlatform = device is null
+                ? null
+                : await _platformDetectionService.GetActivePlatformAsync(device.Serial, _shutdown.Token);
+            ActiveApp = _activePlatform?.Name ?? "Geen gedetecteerd";
         }
         catch
         {
@@ -437,7 +443,7 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Sends the selected media item to the connected device using the active Python platform profile.
+    /// Sends the selected media item to the connected device using the active platform profile.
     /// </summary>
     private async Task SendToDeviceAsync()
     {
@@ -450,8 +456,37 @@ public sealed class MainWindowViewModel : ObservableObject
         try
         {
             StatusMessage = $"{SelectedMedia.FileName} versturen...";
-            var response = await _backend.SendAsync("send_media", new { path = SelectedMedia.Media.Path }, _shutdown.Token);
-            StatusMessage = response.TryGetProperty("message", out var message) ? TranslateBackendMessage(message.GetString()) : "Media verstuurd.";
+            var platform = _activePlatform;
+            if (platform is null)
+            {
+                await RefreshActivePlatformAsync();
+                platform = _activePlatform;
+            }
+
+            if (platform is null)
+            {
+                StatusMessage = "Geen ondersteund platform op de voorgrond.";
+                return;
+            }
+
+            var media = new DomainMediaItem(
+                SelectedMedia.Media.Path,
+                SelectedMedia.Media.Type == AppMediaType.Video ? DomainMediaType.Video : DomainMediaType.Image);
+            var result = await _deviceController.SendMediaAsync(media, platform.Profile, _shutdown.Token);
+            if (!result.Success)
+            {
+                StatusMessage = result.Message;
+                return;
+            }
+
+            var device = _deviceController.SelectedDevice;
+            if (device is not null)
+            {
+                await _androidAppService.TriggerMediaScanAsync(device.Serial, platform.Profile.RemoteMediaPath, _shutdown.Token);
+                await _androidAppService.ForceStopAndRelaunchAsync(device.Serial, platform.PackageName, _shutdown.Token);
+            }
+
+            StatusMessage = $"Media verstuurd naar {platform.Name}.";
             await RefreshActivePlatformAsync();
         }
         catch (Exception ex)
@@ -486,7 +521,9 @@ public sealed class MainWindowViewModel : ObservableObject
                     ImageSource image;
                     try
                     {
-                        image = ThumbnailService.LoadJpegBytes(frame.ImageBytes, 720);
+                        image = frame.Format == StreamFrameFormat.Jpeg
+                            ? ThumbnailService.LoadJpegBytes(frame.ImageBytes, 720)
+                            : ThumbnailService.LoadPngBytes(frame.ImageBytes, 720);
                     }
                     catch
                     {
@@ -508,53 +545,6 @@ public sealed class MainWindowViewModel : ObservableObject
         catch (OperationCanceledException)
         {
         }
-    }
-
-    /// <summary>
-    /// Applies backend status events to bindable UI state.
-    /// </summary>
-    private void HandleBackendEvent(JsonElement evt)
-    {
-        if (!evt.TryGetProperty("event", out var eventName))
-        {
-            return;
-        }
-
-        if (eventName.GetString() == "stream_status" && evt.TryGetProperty("status", out var status))
-        {
-            StatusMessage = TranslateStreamStatus(status.GetString());
-        }
-    }
-
-    /// <summary>
-    /// Converts backend stream status codes into Dutch operator-facing text.
-    /// </summary>
-    private static string TranslateStreamStatus(string? status) => status switch
-    {
-        "starting" => "Stream starten...",
-        "running" => "Stream actief",
-        "stopped" => "Stream gestopt",
-        "error" => "Streamfout",
-        _ => $"Stream: {status}",
-    };
-
-    /// <summary>
-    /// Converts known backend status fragments into Dutch operator-facing text.
-    /// </summary>
-    private static string TranslateBackendMessage(string? message)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return "Actie voltooid.";
-        }
-
-        return message
-            .Replace("Image pushed to gallery for", "Afbeelding naar galerij gestuurd voor", StringComparison.OrdinalIgnoreCase)
-            .Replace("Image converted and pushed to", "Afbeelding geconverteerd en verstuurd naar", StringComparison.OrdinalIgnoreCase)
-            .Replace("Video pushed to", "Video verstuurd naar", StringComparison.OrdinalIgnoreCase)
-            .Replace("closed", "gesloten", StringComparison.OrdinalIgnoreCase)
-            .Replace("Media sent.", "Media verstuurd.", StringComparison.OrdinalIgnoreCase)
-            .Replace("App closed.", "App gesloten.", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

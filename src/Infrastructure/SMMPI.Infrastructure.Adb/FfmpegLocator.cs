@@ -22,6 +22,11 @@ public static class FfmpegLocator
             return path;
         }
 
+        if (TryBundledPrototypeTools(out path))
+        {
+            return path;
+        }
+
         throw new FileNotFoundException(
             "FFmpeg was not found. Install FFmpeg, add it to your user PATH, " +
             "or set environment variable SMMPI_FFMPEG to the full path of ffmpeg.exe. " +
@@ -62,6 +67,25 @@ public static class FfmpegLocator
                     return true;
                 }
             }
+        }
+
+        path = string.Empty;
+        return false;
+    }
+
+    private static bool TryBundledPrototypeTools(out string path)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "packages", "Prototype", "ffmpeg", FfmpegFileName);
+            if (File.Exists(candidate))
+            {
+                path = candidate;
+                return true;
+            }
+
+            dir = dir.Parent;
         }
 
         path = string.Empty;

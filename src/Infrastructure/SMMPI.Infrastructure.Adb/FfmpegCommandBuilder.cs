@@ -43,13 +43,28 @@ public sealed class FfmpegCommandBuilder
             height = profile.TargetWidth;
         }
 
-        filters.Add($"scale={width}:-1");
-        filters.Add(usePadding
-            ? $"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black"
-            : $"crop={width}:{height}");
+        if (usePadding)
+        {
+            filters.Add($"scale={width}:{height}:force_original_aspect_ratio=decrease");
+            filters.Add($"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black");
+        }
+        else
+        {
+            filters.Add($"scale={width}:{height}:force_original_aspect_ratio=increase");
+            filters.Add($"crop={width}:{height}");
+        }
+
         filters.Add($"fps={profile.FramesPerSecond}");
 
         return string.Join(',', filters);
+
+        //filters.Add($"scale={width}:-1");
+        //filters.Add(usePadding
+        //    ? $"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black"
+        //    : $"crop={width}:{height}");
+        //filters.Add($"fps={profile.FramesPerSecond}");
+
+        //return string.Join(',', filters);
     }
 
     private static string Quote(string value) =>
