@@ -57,14 +57,6 @@ public sealed class FfmpegCommandBuilder
         filters.Add($"fps={profile.FramesPerSecond}");
 
         return string.Join(',', filters);
-
-        //filters.Add($"scale={width}:-1");
-        //filters.Add(usePadding
-        //    ? $"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black"
-        //    : $"crop={width}:{height}");
-        //filters.Add($"fps={profile.FramesPerSecond}");
-
-        //return string.Join(',', filters);
     }
 
     private static string Quote(string value) =>

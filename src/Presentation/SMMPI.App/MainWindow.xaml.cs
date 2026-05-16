@@ -26,7 +26,6 @@ namespace SMMPI.App
             InitializeComponent();
             DataContext = _viewModel;
             StreamImage.LostMouseCapture += (_, _) => _viewModel.EndStreamInteraction();
-            SizeChanged += async (_, _) => await _viewModel.UpdateRecordingCropAsync(GetStreamImageWindowRect());
         }
 
         /// <summary>
@@ -214,16 +213,7 @@ namespace SMMPI.App
         /// </summary>
         private async void ToggleRecording_Click(object sender, RoutedEventArgs e)
         {
-            await _viewModel.ToggleRecordingAsync(Title, GetStreamImageWindowRect());
-        }
-
-        /// <summary>
-        /// Gets the stream preview rectangle relative to the WPF window for FFmpeg crop updates.
-        /// </summary>
-        private Rect GetStreamImageWindowRect()
-        {
-            var topLeft = StreamImage.TransformToAncestor(this).Transform(new System.Windows.Point(0, 0));
-            return new Rect(topLeft.X, topLeft.Y, StreamImage.ActualWidth, StreamImage.ActualHeight);
+            await _viewModel.ToggleRecordingAsync();
         }
     }
 }

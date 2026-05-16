@@ -185,6 +185,52 @@ public class Tests
         });
     }
 
+    [Test]
+    public void FfmpegStreamRecordingService_SanitizesPlatformNameForFileName()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(FfmpegStreamRecordingService.SanitizeName("Snap:chat/Test"), Is.EqualTo("Snap_chat_Test"));
+            Assert.That(FfmpegStreamRecordingService.SanitizeName("   "), Is.EqualTo("recording"));
+        });
+    }
+
+    [Test]
+    public void FfmpegStreamRecordingService_StartRecordingRequiresSession()
+    {
+        var recorder = new FfmpegStreamRecordingService(new FakeStreamService(), "ffmpeg");
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(
+            () => recorder.StartRecordingAsync("Snapchat", CancellationToken.None));
+
+        Assert.That(ex?.Message, Is.EqualTo("No recording session has been configured."));
+    }
+
+    [Test]
+    public async Task FfmpegStreamRecordingService_StartRecordingRequiresReceivedFrame()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var recorder = new FfmpegStreamRecordingService(new FakeStreamService(), "ffmpeg");
+
+        try
+        {
+            await recorder.StartSessionAsync("Officer", "Case-1", root, CancellationToken.None);
+
+            var ex = Assert.ThrowsAsync<InvalidOperationException>(
+                () => recorder.StartRecordingAsync("Snapchat", CancellationToken.None));
+
+            Assert.That(ex?.Message, Is.EqualTo("No stream frame has been received yet."));
+        }
+        finally
+        {
+            await recorder.DisposeAsync();
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     private sealed class FakeAdbClient : IAdbClient
     {
         public (string Serial, string LocalPath, string RemotePath)? LastPush { get; private set; }

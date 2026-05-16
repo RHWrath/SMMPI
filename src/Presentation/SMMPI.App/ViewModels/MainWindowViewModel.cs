@@ -26,7 +26,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly IMediaLibraryService _mediaLibraryService;
     private readonly IPlatformDetectionService _platformDetectionService;
     private readonly IAndroidAppService _androidAppService;
-    private readonly ILegacyRecordingService _recordingService;
+    private readonly IStreamRecordingService _recordingService;
     private readonly IFolderPicker _folderPicker;
     private readonly ThumbnailService _thumbnailService;
     private readonly CancellationTokenSource _shutdown = new();
@@ -66,7 +66,7 @@ public sealed class MainWindowViewModel : ObservableObject
         IMediaLibraryService mediaLibraryService,
         IPlatformDetectionService platformDetectionService,
         IAndroidAppService androidAppService,
-        ILegacyRecordingService recordingService,
+        IStreamRecordingService recordingService,
         IFolderPicker folderPicker,
         ThumbnailService thumbnailService)
     {
@@ -86,7 +86,7 @@ public sealed class MainWindowViewModel : ObservableObject
         BrowseCaseLogFolderCommand = new RelayCommand(BrowseCaseLogFolder);
         RefreshDeviceCommand = new AsyncRelayCommand(RefreshDeviceAsync);
         SendToDeviceCommand = new AsyncRelayCommand(SendToDeviceAsync, () => SelectedMedia is not null && ConnectionStatus.StartsWith("verbonden"));
-        ToggleRecordingCommand = new AsyncRelayCommand(() => ToggleRecordingAsync("SMMPI Operator", new Rect(0, 0, 1280, 720)));
+        ToggleRecordingCommand = new AsyncRelayCommand(ToggleRecordingAsync);
         ExportSessionCommand = new RelayCommand(() => StatusMessage = "Sessiebewijs wordt opgeslagen in de geselecteerde zaakmap.");
     }
 
@@ -300,7 +300,7 @@ public sealed class MainWindowViewModel : ObservableObject
     /// <summary>
     /// Starts or stops screen recording for the current stream preview rectangle.
     /// </summary>
-    public async Task ToggleRecordingAsync(string windowTitle, Rect captureRect)
+    public async Task ToggleRecordingAsync()
     {
         using var _ = BeginBusy();
         if (_isRecording)
@@ -312,35 +312,10 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
-        await _recordingService.StartRecordingAsync(
-            _activePlatform?.Name ?? "UnknownPlatform",
-            (int)Math.Max(0, captureRect.X),
-            (int)Math.Max(0, captureRect.Y),
-            (int)Math.Max(2, captureRect.Width),
-            (int)Math.Max(2, captureRect.Height),
-            windowTitle,
-            _shutdown.Token);
+        await _recordingService.StartRecordingAsync(_activePlatform?.Name ?? "UnknownPlatform", _shutdown.Token);
         _isRecording = true;
         OnPropertyChanged(nameof(RecordButtonText));
         StatusMessage = "Opname gestart.";
-    }
-
-    /// <summary>
-    /// Updates the recording crop after the window or stream preview changes size.
-    /// </summary>
-    public async Task UpdateRecordingCropAsync(Rect captureRect)
-    {
-        if (!_isRecording)
-        {
-            return;
-        }
-
-        await _recordingService.UpdateRecordingCropAsync(
-            (int)Math.Max(0, captureRect.X),
-            (int)Math.Max(0, captureRect.Y),
-            (int)Math.Max(2, captureRect.Width),
-            (int)Math.Max(2, captureRect.Height),
-            _shutdown.Token);
     }
 
     /// <summary>

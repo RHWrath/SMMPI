@@ -62,8 +62,7 @@ public partial class App : System.Windows.Application
 
         services.AddSingleton<IFolderPicker, FolderBrowserPicker>();
         services.AddSingleton<ThumbnailService>();
-        services.AddSingleton<PythonBackendClient>();
-        services.AddSingleton<ILegacyRecordingService, LegacyPythonRecordingService>();
+        services.AddSingleton<IStreamRecordingService, FfmpegStreamRecordingService>();
         services.AddTransient<MainWindowViewModel>();
 
         return services.BuildServiceProvider();
