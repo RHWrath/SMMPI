@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using WinForms = System.Windows.Forms;
 
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 /// <summary>
 /// Captures the values needed to start a Python-backed case session.

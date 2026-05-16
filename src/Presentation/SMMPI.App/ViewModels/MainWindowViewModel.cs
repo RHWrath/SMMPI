@@ -8,13 +8,13 @@ using System.Windows.Threading;
 using SMMPI.Domain.Entities;
 using SMMPI.Domain.Enums;
 using SMMPI.Domain.Interfaces;
-using WPFTest.Commands;
-using WPFTest.Services;
+using SMMPI.App.Commands;
+using SMMPI.App.Services;
 using DomainMediaItem = SMMPI.Domain.Entities.MediaItem;
 using DomainMediaType = SMMPI.Domain.Enums.MediaType;
 using DomainTouchAction = SMMPI.Domain.Enums.TouchAction;
 
-namespace WPFTest.ViewModels;
+namespace SMMPI.App.ViewModels;
 
 /// <summary>
 /// Coordinates the WPF shell with application services while exposing bindable state to the main window.

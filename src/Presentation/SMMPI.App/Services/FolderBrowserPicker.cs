@@ -1,4 +1,4 @@
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 /// <summary>
 /// Windows Forms based folder picker used by the WPF shell.

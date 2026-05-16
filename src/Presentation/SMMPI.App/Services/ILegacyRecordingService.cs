@@ -1,4 +1,4 @@
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 public interface ILegacyRecordingService : IAsyncDisposable
 {

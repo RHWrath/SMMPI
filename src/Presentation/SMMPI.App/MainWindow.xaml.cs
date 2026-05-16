@@ -1,8 +1,8 @@
 ﻿using System.Windows;
 using System.Windows.Input;
-using WPFTest.ViewModels;
+using SMMPI.App.ViewModels;
 
-namespace WPFTest
+namespace SMMPI.App
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml

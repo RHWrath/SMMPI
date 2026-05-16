@@ -2,9 +2,9 @@ using System.IO;
 using System.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WPFTest.ViewModels;
+using SMMPI.App.ViewModels;
 
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 /// <summary>
 /// Creates still-image thumbnails for the media explorer and decodes stream frames for display.

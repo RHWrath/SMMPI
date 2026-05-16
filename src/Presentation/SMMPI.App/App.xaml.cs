@@ -4,10 +4,10 @@ using SMMPI.Application.Services;
 using SMMPI.Domain.Interfaces;
 using SMMPI.Infrastructure.Adb;
 using SMMPI.Infrastructure.Logging;
-using WPFTest.Services;
-using WPFTest.ViewModels;
+using SMMPI.App.Services;
+using SMMPI.App.ViewModels;
 
-namespace WPFTest;
+namespace SMMPI.App;
 
 public partial class App : System.Windows.Application
 {

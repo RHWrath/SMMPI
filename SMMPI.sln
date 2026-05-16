@@ -5,7 +5,7 @@ VisualStudioVersion = 18.5.11723.231
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{085C91E7-B4C1-4700-8962-A825F37FDB65}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Persentation", "Persentation", "{E54EB203-D537-433F-9E03-E6A0E4DEF088}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presentation", "Presentation", "{E54EB203-D537-433F-9E03-E6A0E4DEF088}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D3229A3B-A244-4F46-8548-05FB8F7204B6}"
 EndProject

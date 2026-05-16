@@ -1,4 +1,4 @@
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 public sealed class LegacyPythonRecordingService : ILegacyRecordingService
 {
