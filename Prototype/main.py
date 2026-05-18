@@ -24,9 +24,6 @@ class MediaDisplayApp:
     def __init__(self):
         self.app = ctk.CTk()
         ctk.set_appearance_mode("dark")
-        # Fixed size no resizing to avoid complications with stream capture and recording dimensions
-        self.app.geometry("1400x800")
-        self.app.resizable(False, False)
         self.app.title("ADB Media Manager")
 
         start_adb_server()
@@ -53,12 +50,17 @@ class MediaDisplayApp:
         self.session = None
         self.setup_ui()
         self.app.withdraw()
+        
 
         # Recording
         self.recording_manager = RecordingManager()
         self._last_sent_crop = None
         self._recording_start_time = None
         self._recording_timer_after_id = None
+        self._resize_lock_geometry = None
+        self._resize_warning_active = False
+        self._resize_restore_after_id = None
+
 
     def setup_ui(self):
 
@@ -107,6 +109,23 @@ class MediaDisplayApp:
 
         self.add_device_status()
         self.add_platform_status()
+        
+        self.app.bind("<Configure>", self._on_window_configure)
+        
+    def maximize_windowed_fullscreen(self):
+        self.app.deiconify()
+        self.app.update_idletasks()
+
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                hwnd = ctypes.windll.user32.GetParent(self.app.winfo_id())
+                ctypes.windll.user32.ShowWindow(hwnd, 3)  # SW_MAXIMIZE
+                return
+            except Exception as e:
+                print(f"[WARN] Win32 maximize failed: {e}")
+
+        self.app.state("zoomed")
 
     def on_new_case(self):
             self.change_case(success_message="New case selected")
@@ -611,6 +630,10 @@ class MediaDisplayApp:
                     print("[+] Stopping recording before close...")
                     try:
                         self.recording_manager.stop_recording()
+                        self._resize_lock_geometry = None
+                        self._resize_warning_active = False
+                        self.app.resizable(True, True)
+                        
                     except Exception as e:
                         print(f"[ERROR] Failed to stop recording cleanly on close: {e}")
                         show_toast(
@@ -670,6 +693,7 @@ class MediaDisplayApp:
             self.device_manager.show_device_selection()
 
         self.app.after(0, startup_flow)
+        self.app.after(100, self.maximize_windowed_fullscreen)
         self.app.mainloop()
 
     def get_widget_relative_geometry(self, widget):
@@ -691,6 +715,10 @@ class MediaDisplayApp:
                 self.record_button.configure(text="Start Recording")
                 self.info_label.configure(text="Recording stopped")
                 self._last_sent_crop = None
+                
+                self._resize_lock_geometry = None
+                self._resize_warning_active = False
+                self.app.resizable(True, True)
 
                 self.video_border_frame.configure(fg_color="black")
 
@@ -709,15 +737,24 @@ class MediaDisplayApp:
                 self.info_label.configure(text="No active case session.")
                 return
 
-            platform_name = "UnknownPlatform"
-            if hasattr(self, "active_platform") and self.active_platform:
-                platform_name = self.active_platform["name"]
+
 
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
             self._last_sent_crop = (x, y, w, h)
             print(f"[DEBUG] Relative canvas geometry: x={x}, y={y}, w={w}, h={h}")
             print(f"[DEBUG] App root: x={self.app.winfo_rootx()}, y={self.app.winfo_rooty()}")
             print(f"[DEBUG] Canvas root: x={self.video_canvas.winfo_rootx()}, y={self.video_canvas.winfo_rooty()}")
+
+            self.app.update_idletasks()
+
+            self._resize_lock_geometry = (
+                self.app.winfo_width(),
+                self.app.winfo_height(),
+                self.app.winfo_x(),
+                self.app.winfo_y()
+            )
+
+            self.app.resizable(False, False)
 
             self.recording_manager.create_session(
                 case_folder=self.session.case_path,
@@ -763,6 +800,63 @@ class MediaDisplayApp:
         )
 
         self._recording_timer_after_id = self.app.after(1000, self._update_recording_timer)
+        
+    def _on_window_configure(self, event):
+        """
+        Prevent window resizing while recording.
+
+        Without ZMQ dynamic crop updates, the recording crop area is calculated once
+        at recording start. If the window is resized during recording, the captured
+        area no longer matches the device canvas. Therefore, the window size is locked
+        while recording is active.
+        """
+        if event.widget != self.app:
+            return
+
+        if not hasattr(self, "recording_manager"):
+            return
+
+        if not self.recording_manager.is_recording():
+            return
+
+        if not self._resize_lock_geometry:
+            return
+
+        locked_width, locked_height, locked_x, locked_y = self._resize_lock_geometry
+
+        current_width = self.app.winfo_width()
+        current_height = self.app.winfo_height()
+
+        if current_width == locked_width and current_height == locked_height:
+            return
+
+        if self._resize_restore_after_id is not None:
+            return
+
+        def restore_locked_size():
+            self._resize_restore_after_id = None
+
+            if not self.recording_manager.is_recording():
+                return
+
+            geometry = f"{locked_width}x{locked_height}+{locked_x}+{locked_y}"
+            self.app.geometry(geometry)
+
+            if not self._resize_warning_active:
+                self._resize_warning_active = True
+
+                show_toast(
+                    self.app,
+                    "Window resizing is disabled while recording",
+                    fg_color="#d94040",
+                    duration=3000
+                )
+
+                self.app.after(3200, lambda: setattr(self, "_resize_warning_active", False))
+
+            print("[!] Resize blocked: recording is active and dynamic crop update is disabled")
+
+        self._resize_restore_after_id = self.app.after_idle(restore_locked_size)
 
 
 if __name__ == "__main__":

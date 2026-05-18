@@ -9,7 +9,7 @@
       "photo": {
         "width": 1080,
         "height": 1920,
-        "rotate": 90,
+        "rotate": null,
         "mirror": false,
         "resize_mode": "fill",
         "filename": "1000.bmp"
@@ -17,11 +17,11 @@
       "video": {
         "width": 1080,
         "height": 1920,
-        "rotate": 180,
-        "mirror": false,
-        "resize_mode": "fill",
-        "max_duration": 60,
-        "filename": "virtual.mp4"
+        "rotate": 270,
+        "mirror": true,
+        "resize_mode": "stretch",
+        "filename": "virtual.mp4",
+        "max_duration": 60
       }
     },
     {
@@ -70,30 +70,6 @@
         "resize_mode": "contain",
         "max_duration": 60,
         "filename": "virtual.mp4"
-      }
-    },
-    {
-      "name": "test",
-      "package_name": "com.google.android.googlequicksearchbox",
-      "remote_folder": "/storage/emulated/0/Android/data/com.google.android.googlequicksearchbox/files/Camera1/",
-      "photo_mode": "vcam",
-      "gallery_path": null,
-      "photo": {
-        "width": 4032,
-        "height": 3024,
-        "rotate": null,
-        "mirror": false,
-        "resize_mode": "contain",
-        "filename": "virtual_photo.jpg"
-      },
-      "video": {
-        "width": 1920,
-        "height": 1080,
-        "rotate": null,
-        "mirror": false,
-        "resize_mode": "contain",
-        "filename": "virtual.mp4",
-        "max_duration": 60
       }
     }
   ]
