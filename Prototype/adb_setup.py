@@ -86,10 +86,22 @@ def select_device():
         print("Invalid selection, try again.")
 
 def push_file(device, local_path, remote_path):
+    """
+    Push a local file to the device.
+
+    Returns True on success, False on any failure (device disconnected,
+    permission denied, target folder missing, etc). Callers must check
+    the return value before doing anything that depends on the file
+    actually being on the device — e.g. force-stopping and relaunching
+    an app to pick up the new media.
+    """
     try:
         device.push(local_path, remote_path)
+        print(f"[+] Pushed {local_path} -> {remote_path}")
+        return True
     except Exception as e:
-        print(f"Failed to push file: {e}")
+        print(f"[ERROR] Failed to push {local_path} -> {remote_path}: {e}")
+        return False
 
 def start_scrcpy(device):
 

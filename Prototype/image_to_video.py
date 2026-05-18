@@ -243,12 +243,18 @@ def push_image_to_gallery(app_instance, platform_config):
     app_instance.info_label.configure(text="Pushing image to device gallery...")
     app_instance.app.update()
 
-    push_file(app_instance.selected_device, temp_image_path, remote_path)
+    push_ok = push_file(app_instance.selected_device, temp_image_path, remote_path)
 
     try:
         os.unlink(temp_image_path)
     except:
         pass
+
+    if not push_ok:
+        app_instance.info_label.configure(
+            text="Failed to push image to device — check USB connection and device authorization"
+        )
+        return
 
     # Trigger media scan so the image shows up in gallery/picker
     trigger_media_scan(app_instance.selected_device, remote_path)
@@ -313,12 +319,21 @@ def push_image_as_video(app_instance, platform_config):
     app_instance.info_label.configure(text="Pushing video to device...")
     app_instance.app.update()
 
-    push_file(app_instance.selected_device, temp_video_path, remote_path)
+    push_ok = push_file(app_instance.selected_device, temp_video_path, remote_path)
 
     try:
         os.unlink(temp_video_path)
     except:
         pass
+
+    if not push_ok:
+        app_instance.info_label.configure(
+            text=(
+                "Failed to push video to device — check USB connection, device "
+                "authorization, and that the target app has been opened at least once"
+            )
+        )
+        return
 
     # Restart the app so VCAM picks up the new file
     package_name = platform_config["package_name"]
