@@ -1,12 +1,29 @@
-ADB-Media-Manager v1.1.0
+ADB Media Manager — v1.0.0
+Release Date: 11-05-2026
 
-[NEW]
-- Test
-- Test
+Initial stable prototype release of the ADB Media Manager system.
 
-[FIX]
-- Test
-- Test
+----------------------------------------
+[FEATURES]
+----------------------------------------
 
-[IMPROVED]
-- Test
+- Automatic platform detection
+- Case management system
+- Phone screen recording (evidence recording)
+- Platform management
+- Keyboard integration
+
+----------------------------------------
+[CURRENT PLATFORMS]
+----------------------------------------
+
+- Snapchat
+- Discord
+- WhatsApp
+
+----------------------------------------
+[KNOWN ISSUE]
+----------------------------------------
+
+- adb.exe opens a command window during runtime. 
+    DO NOT CLOSE this window, otherwise the device connection will terminate.
