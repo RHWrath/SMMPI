@@ -9,7 +9,7 @@
       "photo": {
         "width": 1080,
         "height": 1920,
-        "rotate": 90,
+        "rotate": null,
         "mirror": false,
         "resize_mode": "fill",
         "filename": "1000.bmp"
@@ -17,11 +17,11 @@
       "video": {
         "width": 1080,
         "height": 1920,
-        "rotate": 180,
+        "rotate": 270,
         "mirror": false,
         "resize_mode": "fill",
-        "max_duration": 60,
-        "filename": "virtual.mp4"
+        "filename": "virtual.mp4",
+        "max_duration": 60
       }
     },
     {

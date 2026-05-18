@@ -71,30 +71,6 @@
         "max_duration": 60,
         "filename": "virtual.mp4"
       }
-    },
-    {
-      "name": "test",
-      "package_name": "com.google.android.googlequicksearchbox",
-      "remote_folder": "/storage/emulated/0/Android/data/com.google.android.googlequicksearchbox/files/Camera1/",
-      "photo_mode": "vcam",
-      "gallery_path": null,
-      "photo": {
-        "width": 4032,
-        "height": 3024,
-        "rotate": null,
-        "mirror": false,
-        "resize_mode": "contain",
-        "filename": "virtual_photo.jpg"
-      },
-      "video": {
-        "width": 1920,
-        "height": 1080,
-        "rotate": null,
-        "mirror": false,
-        "resize_mode": "contain",
-        "filename": "virtual.mp4",
-        "max_duration": 60
-      }
     }
   ]
 }
