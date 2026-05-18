@@ -36,9 +36,9 @@ class UISetup:
     def create_main_frame(parent):
         main_frame = ctk.CTkFrame(parent)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(0, weight=2)
         main_frame.grid_columnconfigure(1, weight=4)
-        main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(0, weight=4)
         main_frame.grid_rowconfigure(1, weight=1)
 
         return main_frame
@@ -123,6 +123,30 @@ class UISetup:
         return middle_panel, info_label
 
     @staticmethod
+    def _attach_tooltip(widget, text):
+        """Show a small label tooltip on hover."""
+        tip = None
+
+        def on_enter(e):
+            nonlocal tip
+            x = widget.winfo_rootx() + widget.winfo_width() // 2
+            y = widget.winfo_rooty() + widget.winfo_height() + 4
+            tip = ctk.CTkToplevel(widget)
+            tip.wm_overrideredirect(True)
+            tip.wm_geometry(f"+{x}+{y}")
+            ctk.CTkLabel(tip, text=text, font=("Arial", 11),
+                         fg_color="#2b2b2b", corner_radius=6).pack(padx=8, pady=4)
+
+        def on_leave(e):
+            nonlocal tip
+            if tip:
+                tip.destroy()
+                tip = None
+
+        widget.bind("<Enter>", on_enter)
+        widget.bind("<Leave>", on_leave)
+
+    @staticmethod
     def setup_right_panel(parent):
         right_panel = ctk.CTkFrame(parent)
         right_panel.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=(5, 0))
@@ -135,7 +159,7 @@ class UISetup:
             text="Device Screen",
             font=("Arial", 14, "bold")
         )
-        title_label.pack(pady=(10, 5))
+        title_label.pack(side="left", pady=(10, 5))
 
         recording_timer_label = ctk.CTkLabel(
             header_frame,
@@ -143,7 +167,34 @@ class UISetup:
             font=("Arial", 13, "bold"),
             text_color="gray60"
         )
-        recording_timer_label.pack(side="right")
+        recording_timer_label.pack(side="right", pady=(10, 5))
+
+        record_button = ctk.CTkButton(
+            header_frame,
+            text="⏺",
+            width=36,
+            height=36,
+            corner_radius=18,
+            font=("Arial", 16),
+            fg_color="#1f6aa5",
+            hover_color="#144870",
+        )
+        record_button.pack(side="right", padx=(0, 8), pady=(10, 5))
+        UISetup._attach_tooltip(record_button, "Start Recording")
+
+        close_app_button = ctk.CTkButton(
+            header_frame,
+            text="⌂",
+            width=36,
+            height=36,
+            corner_radius=18,
+            font=("Arial", 16),
+            fg_color="#d94040",
+            hover_color="#b33030",
+            state="disabled",
+        )
+        close_app_button.pack(side="right", padx=(0, 4), pady=(10, 5))
+        UISetup._attach_tooltip(close_app_button, "Close Foreground App")
 
         video_container = ctk.CTkFrame(
             right_panel,
@@ -169,31 +220,10 @@ class UISetup:
 
         status_label = ctk.CTkLabel(
             right_panel,
-            text="Stream will display here - click to interact",
+            text="",
             font=("Arial", 10)
         )
-        status_label.pack(pady=(10, 5))
-
-        close_app_button = ctk.CTkButton(
-            right_panel,
-            text="Close Foreground App",
-            corner_radius=32,
-            font=("Arial", 12),
-            fg_color="#d94040",
-            hover_color="#b33030",
-            state="disabled",
-        )
-        close_app_button.pack(pady=(0, 5))
-
-        record_button = ctk.CTkButton(
-            right_panel,
-            text="Start Recording",
-            corner_radius=32,
-            font=("Arial", 12),
-            fg_color="#1f6aa5",
-            hover_color="#144870",
-        )
-        record_button.pack(pady=(0, 5))
+        # Not packed — kept as attribute only
 
         return right_panel, video_border_frame, video_canvas, status_label, close_app_button, record_button, recording_timer_label
 

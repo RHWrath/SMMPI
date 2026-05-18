@@ -7,6 +7,7 @@ import tempfile
 
 from utils import get_ffmpeg_path
 
+
 class ImageDisplay:
     def __init__(self, parent_scroll_frame):
         self.scroll_frame = parent_scroll_frame
@@ -15,11 +16,11 @@ class ImageDisplay:
             '.bmp', '.webp', '.tiff', '.tif'
         }
         self.video_extensions = {
-            '.mp4', '.mov', '.avi', '.mkv', 
+            '.mp4', '.mov', '.avi', '.mkv',
             '.webm', '.flv', '.wmv', '.m4v'
         }
         self.columns = 2
-        self.thumbnail_size = 250
+        self.thumbnail_size = 350
 
         self._image_cache = []
 
@@ -110,10 +111,10 @@ class ImageDisplay:
     def _extract_video_thumbnail(self, video_path):
         """
         Extract a thumbnail from a video file using ffmpeg.
-        
+
         Args:
             video_path (str): Path to the video file
-            
+
         Returns:
             PIL.Image or None: Thumbnail image or None if extraction failed
         """
@@ -122,9 +123,9 @@ class ImageDisplay:
             print(f"[DEBUG] Attempting to extract thumbnail from: {os.path.basename(video_path)}")
             with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_thumb:
                 temp_thumb_path = temp_thumb.name
-            
+
             ffmpeg_path = get_ffmpeg_path()
-            
+
             # Extract frame at 1 second (or first frame if video is shorter)
             cmd = [
                 ffmpeg_path,
@@ -134,24 +135,24 @@ class ImageDisplay:
                 '-y',
                 temp_thumb_path
             ]
-            
+
             print(f"[DEBUG] Running ffmpeg command: {' '.join(cmd[:5])}...")
-            
+
             # Windows-specific subprocess configuration
             kwargs = {
                 'capture_output': True,
                 'text': True,
                 'timeout': 5
             }
-            
+
             if sys.platform == 'win32':
                 # Hide console window on Windows
                 kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-            
+
             result = subprocess.run(cmd, **kwargs)
-            
+
             print(f"[DEBUG] FFmpeg return code: {result.returncode}")
-            
+
             if result.returncode == 0 and os.path.exists(temp_thumb_path):
                 print(f"[DEBUG] Successfully extracted thumbnail to {temp_thumb_path}")
                 pil_image = Image.open(temp_thumb_path)
@@ -172,7 +173,7 @@ class ImageDisplay:
                     except:
                         pass
                 return None
-                
+
         except Exception as e:
             print(f"[ERROR] Exception extracting video thumbnail for {os.path.basename(video_path)}: {e}")
             import traceback
@@ -188,12 +189,12 @@ class ImageDisplay:
         """Create a video thumbnail display with play icon overlay."""
         try:
             pil_image = self._extract_video_thumbnail(file_path)
-            
+
             if pil_image is None:
                 # Fall back to placeholder if thumbnail extraction failed
                 self._create_video_placeholder(parent_frame, file_path, filename, on_click_callback)
                 return
-            
+
             max_size = self.thumbnail_size
             ratio = min(max_size / pil_image.width, max_size / pil_image.height)
 
@@ -209,7 +210,7 @@ class ImageDisplay:
                 dark_image=pil_image,
                 size=(new_width, new_height)
             )
-            
+
             print(f"[DEBUG] Created CTkImage for video: {new_width}x{new_height}")
 
             # Use Label instead of Button for better image display
@@ -223,11 +224,11 @@ class ImageDisplay:
                 cursor="hand2"
             )
             video_label.pack(pady=(10, 5))
-            
+
             # Bind click event
             if on_click_callback:
                 video_label.bind("<Button-1>", lambda e: on_click_callback(file_path))
-            
+
             print(f"[DEBUG] Created video label widget for {filename}")
 
             video_label.image = ctk_image
@@ -286,7 +287,7 @@ class ImageDisplay:
             try:
                 pil_image = Image.open(file_path)
 
-                panel_width, panel_height = 300, 400
+                panel_width, panel_height = 200, 260
                 ratio = min(panel_width / pil_image.width, panel_height / pil_image.height)
 
                 new_width = int(pil_image.width * ratio)
@@ -326,11 +327,11 @@ class ImageDisplay:
         elif ext in self.video_extensions:
             try:
                 pil_image = self._extract_video_thumbnail(file_path)
-                
+
                 if pil_image is None:
                     raise Exception("Could not extract video thumbnail")
-                
-                panel_width, panel_height = 300, 400
+
+                panel_width, panel_height = 200, 260
                 ratio = min(panel_width / pil_image.width, panel_height / pil_image.height)
 
                 new_width = int(pil_image.width * ratio)
@@ -349,7 +350,7 @@ class ImageDisplay:
                 # Container for video thumbnail with play icon
                 video_container = ctk.CTkFrame(parent_panel, fg_color="transparent")
                 video_container.pack(expand=True, pady=20)
-                
+
                 video_widget = ctk.CTkLabel(
                     video_container,
                     image=ctk_image,
@@ -362,7 +363,7 @@ class ImageDisplay:
 
                 video_widget.image = ctk_image
                 self._image_cache.append(ctk_image)
-                
+
                 # Add filename label
                 filename_label = ctk.CTkLabel(
                     video_container,

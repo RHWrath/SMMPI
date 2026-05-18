@@ -94,10 +94,6 @@ class MediaDisplayApp:
 
         self.middle_panel, self.info_label = UISetup.setup_middle_panel(main_frame, self.on_media_confirm)
 
-        self.middle_panel.configure(width=360, height=460)
-        self.middle_panel.pack_propagate(False) if hasattr(self.middle_panel, "pack_propagate") else None
-        self.middle_panel.grid_propagate(False)
-
         (self.right_panel, self.video_border_frame, self.video_canvas, self.right_status_label,
          self.close_app_button, self.record_button, self.recording_timer_label) = UISetup.setup_right_panel(main_frame)
 
@@ -105,12 +101,18 @@ class MediaDisplayApp:
 
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
-        self.add_device_status()
-        self.add_platform_status()
+        # Pre-created without packing — kept as attributes so _handle_disconnect
+        # and update_platform_status don't crash, but not visible in the UI.
+        self.device_status_label = ctk.CTkLabel(
+            self.right_panel, text="", font=("Arial", 10)
+        )
+        self.platform_status_label = ctk.CTkLabel(
+            self.right_panel, text="", font=("Arial", 10)
+        )
 
     def on_new_case(self):
-            self.change_case(success_message="New case selected")
-        
+        self.change_case(success_message="New case selected")
+
     def on_open_case(self):
         self.change_case(success_message="Case changed")
 
@@ -201,7 +203,7 @@ class MediaDisplayApp:
 
         try:
             print(f"[+] Starting stream for device: {self.selected_device.serial}")
-            self.right_status_label.configure(text="Stream has started")
+            self.right_status_label.configure(text="")
 
             self.stream = ScrcpyCanvasWrapper(
                 self.video_canvas,
@@ -245,20 +247,17 @@ class MediaDisplayApp:
             self.device_status_label.pack(pady=5)
 
     def add_session_status(self):
-        """Add session info label to the UI after login."""
+        """Kept as a no-op — session info is shown in the topbar only."""
         if not self.session:
             return
-
         session_text = f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
-
         self.session_status_label = ctk.CTkLabel(
             self.right_panel,
             text=session_text,
             font=("Arial", 11),
             text_color="#4A9EFF"
         )
-        self.session_status_label.pack(pady=(0, 5))
-
+        # Not packed — label kept as attribute so change_case configure calls don't crash
 
     def _open_add_platform_wizard(self):
         """Open the Add Platform wizard. Gated by an active session."""
@@ -688,7 +687,7 @@ class MediaDisplayApp:
         try:
             if self.recording_manager.is_recording():
                 self.recording_manager.stop_recording()
-                self.record_button.configure(text="Start Recording")
+                self.record_button.configure(text="⏺", fg_color="#1f6aa5", hover_color="#144870")
                 self.info_label.configure(text="Recording stopped")
                 self._last_sent_crop = None
 
@@ -730,7 +729,7 @@ class MediaDisplayApp:
             )
             # Start recording Logic
             self.recording_manager.start_recording()
-            self.record_button.configure(text="Stop Recording")
+            self.record_button.configure(text="⏹", fg_color="#d94040", hover_color="#b33030")
             self.info_label.configure(text="Recording started")
 
             # Add red border to video canvas to indicate recording
@@ -744,7 +743,6 @@ class MediaDisplayApp:
         except Exception as e:
             self.info_label.configure(text=f"Recording error: {str(e)}")
             print(f"[ERROR] toggle_recording: {e}")
-
 
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
