@@ -73,7 +73,6 @@ public sealed class MainWindowViewModel : ObservableObject
         RefreshDeviceCommand = new AsyncRelayCommand(RefreshDeviceAsync);
         SendToDeviceCommand = new AsyncRelayCommand(SendToDeviceAsync, () => SelectedMedia is not null && ConnectionStatus.StartsWith("verbonden"));
         ToggleRecordingCommand = new AsyncRelayCommand(() => ToggleRecordingAsync("SMMPI Operator", new Rect(0, 0, 1280, 720)));
-        ExportSessionCommand = new RelayCommand(() => StatusMessage = "Sessiebewijs wordt opgeslagen in de geselecteerde zaakmap.");
     }
 
     public ObservableCollection<MediaItemViewModel> MediaItems { get; } = [];
@@ -83,7 +82,6 @@ public sealed class MainWindowViewModel : ObservableObject
     public ICommand RefreshDeviceCommand { get; }
     public ICommand SendToDeviceCommand { get; }
     public ICommand ToggleRecordingCommand { get; }
-    public ICommand ExportSessionCommand { get; }
 
     public string OfficerName
     {
