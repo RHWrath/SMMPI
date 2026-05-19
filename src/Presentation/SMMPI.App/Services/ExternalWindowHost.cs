@@ -10,6 +10,14 @@ namespace SMMPI.App.Services;
 
 public sealed class ExternalWindowHost : HwndHost
 {
+    private const int WmSetFocus = 0x0007;
+    private const int WmKeyDown = 0x0100;
+    private const int WmChar = 0x0102;
+    private const int WmSysKeyDown = 0x0104;
+    private const int WmLButtonDown = 0x0201;
+    private const int WmRButtonDown = 0x0204;
+    private const int WmMButtonDown = 0x0207;
+
     public static readonly DependencyProperty ProcessIdProperty = DependencyProperty.Register(
         nameof(ProcessId),
         typeof(int?),
@@ -23,11 +31,14 @@ public sealed class ExternalWindowHost : HwndHost
         new PropertyMetadata(null, OnWindowTargetChanged));
 
     private readonly DispatcherTimer _attachTimer;
+    private readonly WindowProc _externalWindowProc;
     private nint _hostHandle;
     private nint _externalHandle;
+    private nint _originalExternalWindowProc;
 
     public ExternalWindowHost()
     {
+        _externalWindowProc = ExternalWindowProc;
         _attachTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(250),
@@ -74,7 +85,7 @@ public sealed class ExternalWindowHost : HwndHost
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
         _attachTimer.Stop();
-        _externalHandle = nint.Zero;
+        RestoreExternalWindowProc();
         if (hwnd.Handle != nint.Zero)
         {
             DestroyWindow(hwnd.Handle);
@@ -85,6 +96,19 @@ public sealed class ExternalWindowHost : HwndHost
     {
         base.OnWindowPositionChanged(rcBoundingBox);
         ResizeExternalWindow();
+        Dispatcher.BeginInvoke(FocusExternalWindow, DispatcherPriority.Input);
+    }
+
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        base.OnGotKeyboardFocus(e);
+        FocusExternalWindow();
+    }
+
+    protected override bool TabIntoCore(TraversalRequest request)
+    {
+        FocusExternalWindow();
+        return true;
     }
 
     protected override bool TranslateAcceleratorCore(ref MSG msg, ModifierKeys modifiers)
@@ -120,10 +144,20 @@ public sealed class ExternalWindowHost : HwndHost
         return base.TranslateAcceleratorCore(ref msg, modifiers);
     }
 
+    protected override nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
+    {
+        if (msg is WmSetFocus or WmLButtonDown or WmRButtonDown or WmMButtonDown)
+        {
+            FocusExternalWindow();
+        }
+
+        return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+    }
+
     private static void OnWindowTargetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var host = (ExternalWindowHost)d;
-        host._externalHandle = nint.Zero;
+        host.RestoreExternalWindowProc();
         host.TryAttachExternalWindow();
     }
 
@@ -152,7 +186,9 @@ public sealed class ExternalWindowHost : HwndHost
         style &= ~(WindowStyles.WS_CAPTION | WindowStyles.WS_THICKFRAME | WindowStyles.WS_POPUP);
         style |= WindowStyles.WS_CHILD | WindowStyles.WS_VISIBLE;
         SetWindowLongPtr(_externalHandle, WindowLongIndex.GWL_STYLE, new nint(style));
+        SubclassExternalWindow();
         ResizeExternalWindow();
+        FocusExternalWindow();
     }
 
     private void ResizeExternalWindow()
@@ -169,6 +205,77 @@ public sealed class ExternalWindowHost : HwndHost
             Math.Max(1, (int)ActualWidth),
             Math.Max(1, (int)ActualHeight),
             true);
+        FocusExternalWindow();
+    }
+
+    private void FocusExternalWindow()
+    {
+        if (_externalHandle != nint.Zero && IsWindow(_externalHandle))
+        {
+            SetFocus(_externalHandle);
+        }
+    }
+
+    private void SubclassExternalWindow()
+    {
+        if (_externalHandle == nint.Zero || _originalExternalWindowProc != nint.Zero)
+        {
+            return;
+        }
+
+        _originalExternalWindowProc = SetWindowLongPtr(
+            _externalHandle,
+            WindowLongIndex.GWL_WNDPROC,
+            Marshal.GetFunctionPointerForDelegate(_externalWindowProc));
+    }
+
+    private void RestoreExternalWindowProc()
+    {
+        if (_externalHandle != nint.Zero && _originalExternalWindowProc != nint.Zero && IsWindow(_externalHandle))
+        {
+            SetWindowLongPtr(_externalHandle, WindowLongIndex.GWL_WNDPROC, _originalExternalWindowProc);
+        }
+
+        _externalHandle = nint.Zero;
+        _originalExternalWindowProc = nint.Zero;
+    }
+
+    private nint ExternalWindowProc(nint hwnd, int msg, nint wParam, nint lParam)
+    {
+        if (TryHandleKeyboardMessage(msg, wParam))
+        {
+            return nint.Zero;
+        }
+
+        return _originalExternalWindowProc == nint.Zero
+            ? DefWindowProc(hwnd, msg, wParam, lParam)
+            : CallWindowProc(_originalExternalWindowProc, hwnd, msg, wParam, lParam);
+    }
+
+    private bool TryHandleKeyboardMessage(int msg, nint wParam)
+    {
+        if (msg is WmKeyDown or WmSysKeyDown)
+        {
+            var key = KeyInterop.KeyFromVirtualKey(wParam.ToInt32());
+            var args = new ExternalHostKeyEventArgs(key, Keyboard.Modifiers);
+            AndroidKeyDown?.Invoke(this, args);
+            return args.Handled;
+        }
+
+        if (msg == WmChar)
+        {
+            var c = (char)wParam.ToInt32();
+            if (char.IsControl(c))
+            {
+                return false;
+            }
+
+            var args = new ExternalHostTextEventArgs(c.ToString(), Keyboard.Modifiers);
+            AndroidTextInput?.Invoke(this, args);
+            return args.Handled;
+        }
+
+        return false;
     }
 
     private static nint FindTopLevelWindow(int processId, string? title)
@@ -214,6 +321,8 @@ public sealed class ExternalWindowHost : HwndHost
 
     private delegate bool EnumWindowsProc(nint hwnd, nint lParam);
 
+    private delegate nint WindowProc(nint hwnd, int msg, nint wParam, nint lParam);
+
     private static class WindowStyles
     {
         public const int WS_CHILD = 0x40000000;
@@ -227,6 +336,7 @@ public sealed class ExternalWindowHost : HwndHost
     private static class WindowLongIndex
     {
         public const int GWL_STYLE = -16;
+        public const int GWL_WNDPROC = -4;
     }
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -276,6 +386,15 @@ public sealed class ExternalWindowHost : HwndHost
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
     private static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern nint SetFocus(nint hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, int msg, nint wParam, nint lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern nint DefWindowProc(nint hWnd, int msg, nint wParam, nint lParam);
 }
 
 public sealed class ExternalHostKeyEventArgs : EventArgs

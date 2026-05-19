@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using SMMPI.App.Services;
 using SMMPI.App.ViewModels;
 
 namespace SMMPI.App.Views;
@@ -18,7 +19,7 @@ public partial class PhoneStreamPanel
     public PhoneStreamPanel()
     {
         InitializeComponent();
-        StreamImage.LostMouseCapture += (_, _) => ViewModel?.EndStreamInteraction();
+        ScrcpyHost.LostMouseCapture += (_, _) => ViewModel?.EndStreamInteraction();
     }
 
     private MainWindowViewModel? ViewModel => DataContext as MainWindowViewModel;
@@ -28,8 +29,8 @@ public partial class PhoneStreamPanel
     /// </summary>
     public Rect GetStreamImageBoundsRelativeTo(Visual ancestor)
     {
-        var topLeft = StreamImage.TransformToAncestor(ancestor).Transform(new System.Windows.Point(0, 0));
-        return new Rect(topLeft.X, topLeft.Y, StreamImage.ActualWidth, StreamImage.ActualHeight);
+        var topLeft = ScrcpyHost.TransformToAncestor(ancestor).Transform(new System.Windows.Point(0, 0));
+        return new Rect(topLeft.X, topLeft.Y, ScrcpyHost.ActualWidth, ScrcpyHost.ActualHeight);
     }
 
     /// <summary>
@@ -43,12 +44,12 @@ public partial class PhoneStreamPanel
         }
 
         viewModel.BeginStreamInteraction();
-        StreamImage.CaptureMouse();
-        Keyboard.Focus(StreamImage);
-        var point = e.GetPosition(StreamImage);
+        ScrcpyHost.CaptureMouse();
+        Keyboard.Focus(ScrcpyHost);
+        var point = e.GetPosition(ScrcpyHost);
         _pointerDownTask = viewModel.SendTouchFromControlAsync(
-            StreamImage.ActualWidth,
-            StreamImage.ActualHeight,
+            ScrcpyHost.ActualWidth,
+            ScrcpyHost.ActualHeight,
             point.X,
             point.Y,
             DeviceTouchAction.Down);
@@ -59,7 +60,7 @@ public partial class PhoneStreamPanel
         }
         catch
         {
-            StreamImage.ReleaseMouseCapture();
+            ScrcpyHost.ReleaseMouseCapture();
             viewModel.EndStreamInteraction();
         }
     }
@@ -67,7 +68,7 @@ public partial class PhoneStreamPanel
     /// <summary>
     /// Forwards supported special keys and clipboard paste gestures to the Android device.
     /// </summary>
-    private async void StreamImage_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private async void ScrcpyHost_AndroidKeyDown(object sender, ExternalHostKeyEventArgs e)
     {
         if (ViewModel is not { } viewModel || !viewModel.CanSendDeviceKeyboard)
         {
@@ -79,7 +80,7 @@ public partial class PhoneStreamPanel
             return;
         }
 
-        var mods = Keyboard.Modifiers;
+        var mods = e.Modifiers;
         if (mods.HasFlag(ModifierKeys.Control) && e.Key == Key.V)
         {
             e.Handled = true;
@@ -104,14 +105,14 @@ public partial class PhoneStreamPanel
     /// <summary>
     /// Forwards printable text input to the Android device.
     /// </summary>
-    private async void StreamImage_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    private async void ScrcpyHost_AndroidTextInput(object sender, ExternalHostTextEventArgs e)
     {
         if (ViewModel is not { } viewModel || !viewModel.CanSendDeviceKeyboard || string.IsNullOrEmpty(e.Text))
         {
             return;
         }
 
-        var mods = Keyboard.Modifiers;
+        var mods = e.Modifiers;
         if (mods.HasFlag(ModifierKeys.Control) || mods.HasFlag(ModifierKeys.Alt) || mods.HasFlag(ModifierKeys.Windows))
         {
             return;
@@ -126,7 +127,7 @@ public partial class PhoneStreamPanel
     /// </summary>
     private async void StreamImage_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (ViewModel is not { } viewModel || !StreamImage.IsMouseCaptured || e.LeftButton != MouseButtonState.Pressed)
+        if (ViewModel is not { } viewModel || !ScrcpyHost.IsMouseCaptured || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
         }
@@ -140,8 +141,8 @@ public partial class PhoneStreamPanel
             return;
         }
 
-        var point = e.GetPosition(StreamImage);
-        await viewModel.SendTouchFromControlAsync(StreamImage.ActualWidth, StreamImage.ActualHeight, point.X, point.Y, DeviceTouchAction.Move);
+        var point = e.GetPosition(ScrcpyHost);
+        await viewModel.SendTouchFromControlAsync(ScrcpyHost.ActualWidth, ScrcpyHost.ActualHeight, point.X, point.Y, DeviceTouchAction.Move);
     }
 
     /// <summary>
@@ -165,13 +166,13 @@ public partial class PhoneStreamPanel
                 return;
             }
 
-            var point = e.GetPosition(StreamImage);
-            await viewModel.SendTouchFromControlAsync(StreamImage.ActualWidth, StreamImage.ActualHeight, point.X, point.Y, DeviceTouchAction.Up);
+            var point = e.GetPosition(ScrcpyHost);
+            await viewModel.SendTouchFromControlAsync(ScrcpyHost.ActualWidth, ScrcpyHost.ActualHeight, point.X, point.Y, DeviceTouchAction.Up);
         }
         finally
         {
             _pointerDownTask = Task.CompletedTask;
-            StreamImage.ReleaseMouseCapture();
+            ScrcpyHost.ReleaseMouseCapture();
             viewModel.EndStreamInteraction();
         }
     }

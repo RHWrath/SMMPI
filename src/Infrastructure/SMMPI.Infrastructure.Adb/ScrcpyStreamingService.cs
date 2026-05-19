@@ -140,7 +140,7 @@ public sealed class ScrcpyStreamingService : IAndroidStreamingService
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = false,
+                CreateNoWindow = true,
             },
         };
 

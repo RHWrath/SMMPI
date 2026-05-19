@@ -11,6 +11,7 @@ using SMMPI.Domain.Enums;
 using SMMPI.Domain.Interfaces;
 using SMMPI.App.Commands;
 using SMMPI.App.Services;
+using SMMPI.Infrastructure.Adb;
 using DomainMediaItem = SMMPI.Domain.Entities.MediaItem;
 using DomainMediaType = SMMPI.Domain.Enums.MediaType;
 using DomainTouchAction = SMMPI.Domain.Enums.TouchAction;
@@ -271,6 +272,10 @@ public sealed class MainWindowViewModel : ObservableObject
     /// </summary>
     public void BeginStreamInteraction()
     {
+        if (_streamService is IStreamTouchInteractionPause pause)
+        {
+            pause.PushInteractionPause();
+        }
     }
 
     /// <summary>
@@ -278,6 +283,10 @@ public sealed class MainWindowViewModel : ObservableObject
     /// </summary>
     public void EndStreamInteraction()
     {
+        if (_streamService is IStreamTouchInteractionPause pause)
+        {
+            pause.PopInteractionPause();
+        }
     }
 
     /// <summary>
@@ -553,6 +562,7 @@ public sealed class MainWindowViewModel : ObservableObject
             var selected = devices.FirstOrDefault(device => device.State == DeviceConnectionState.Connected);
             if (selected is null)
             {
+                await _androidStreamingService.StopAsync(_shutdown.Token);
                 ConnectionStatus = "niet verbonden";
                 DeviceName = "-";
                 StatusMessage = "Geen Android-telefoon gevonden. Zet USB-debugging aan en klik op Stream verversen.";
@@ -564,6 +574,8 @@ public sealed class MainWindowViewModel : ObservableObject
             ConnectionStatus = "verbonden (USB)";
             DeviceName = selected.DisplayName;
             StatusMessage = "scrcpy-stream starten...";
+
+            await _androidStreamingService.StopAsync(_shutdown.Token);
 
             var streamResult = await _androidStreamingService.StartAsync(
                 selected,
