@@ -104,6 +104,16 @@ public class Tests
     }
 
     [Test]
+    public void AdbPlatformDetectionService_ParsesResumedActivityPackage()
+    {
+        const string dumpsys = "  ResumedActivity: ActivityRecord{abc u0 com.snapchat.android/.LandingActivity t12}";
+
+        var packageName = AdbPlatformDetectionService.ParseForegroundPackage(dumpsys);
+
+        Assert.That(packageName, Is.EqualTo("com.snapchat.android"));
+    }
+
+    [Test]
     public void JpegSizeReader_ReadsBaselineSofDimensions()
     {
         // Minimal JPEG: SOF0 with 1x1 dimensions (remaining bytes are filler to satisfy length field).
@@ -173,6 +183,69 @@ public class Tests
             Assert.That(command.Arguments, Does.Contain("-vf \"transpose=2,hflip,scale=1920:-1,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,fps=30\""));
             Assert.That(command.Arguments, Does.Contain("-pix_fmt yuv420p"));
         });
+    }
+
+    [Test]
+    public void ScrcpyCommandBuilder_AddsSerialAudioAndRecordingOptions()
+    {
+        var args = new ScrcpyCommandBuilder().BuildArguments(
+            "ABC123",
+            new AndroidStreamingOptions(AudioEnabled: true, RecordPath: @"C:\cases\rec.mp4", WindowTitle: "SMMPI scrcpy"),
+            includeAudio: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(args, Does.Contain("--serial"));
+            Assert.That(args, Does.Contain("ABC123"));
+            Assert.That(args, Does.Contain("--max-fps"));
+            Assert.That(args, Does.Contain("30"));
+            Assert.That(args, Does.Contain("--max-size"));
+            Assert.That(args, Does.Contain("1280"));
+            Assert.That(args, Does.Contain("--window-title"));
+            Assert.That(args, Does.Contain("SMMPI scrcpy"));
+            Assert.That(args, Does.Contain("--audio-codec=aac"));
+            Assert.That(args, Does.Contain(@"--record=C:\cases\rec.mp4"));
+            Assert.That(args, Does.Contain("--record-format=mp4"));
+            Assert.That(args, Does.Not.Contain("--no-audio"));
+        });
+    }
+
+    [Test]
+    public void ScrcpyCommandBuilder_DisablesAudioWhenRequested()
+    {
+        var args = new ScrcpyCommandBuilder().BuildArguments("ABC123", new AndroidStreamingOptions(), includeAudio: false);
+
+        Assert.That(args, Does.Contain("--no-audio"));
+    }
+
+    [Test]
+    public void ScrcpyRecordingService_SanitizesPlatformNameForFileName()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(ScrcpyRecordingService.SanitizeName("Snap:chat/Test"), Is.EqualTo("Snap_chat_Test"));
+            Assert.That(ScrcpyRecordingService.SanitizeName("   "), Is.EqualTo("recording"));
+        });
+    }
+
+    [Test]
+    public async Task Sha256FileHasher_ComputesExpectedHash()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "evidence.bin");
+
+        try
+        {
+            await File.WriteAllTextAsync(path, "abc");
+            var hash = await new Sha256FileHasher().ComputeAsync(path, CancellationToken.None);
+
+            Assert.That(hash, Is.EqualTo("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     private sealed class FakeAdbClient : IAdbClient
