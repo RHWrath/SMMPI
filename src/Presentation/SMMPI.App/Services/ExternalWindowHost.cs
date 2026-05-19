@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
@@ -33,6 +34,10 @@ public sealed class ExternalWindowHost : HwndHost
         };
         _attachTimer.Tick += (_, _) => TryAttachExternalWindow();
     }
+
+    public event EventHandler<ExternalHostKeyEventArgs>? AndroidKeyDown;
+
+    public event EventHandler<ExternalHostTextEventArgs>? AndroidTextInput;
 
     public int? ProcessId
     {
@@ -80,6 +85,39 @@ public sealed class ExternalWindowHost : HwndHost
     {
         base.OnWindowPositionChanged(rcBoundingBox);
         ResizeExternalWindow();
+    }
+
+    protected override bool TranslateAcceleratorCore(ref MSG msg, ModifierKeys modifiers)
+    {
+        const int wmKeyDown = 0x0100;
+        const int wmSysKeyDown = 0x0104;
+        const int wmChar = 0x0102;
+
+        if (msg.message is wmKeyDown or wmSysKeyDown)
+        {
+            var key = KeyInterop.KeyFromVirtualKey(msg.wParam.ToInt32());
+            var args = new ExternalHostKeyEventArgs(key, modifiers);
+            AndroidKeyDown?.Invoke(this, args);
+            if (args.Handled)
+            {
+                return true;
+            }
+        }
+        else if (msg.message == wmChar)
+        {
+            var c = (char)msg.wParam.ToInt32();
+            if (!char.IsControl(c))
+            {
+                var args = new ExternalHostTextEventArgs(c.ToString(), modifiers);
+                AndroidTextInput?.Invoke(this, args);
+                if (args.Handled)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return base.TranslateAcceleratorCore(ref msg, modifiers);
     }
 
     private static void OnWindowTargetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -238,4 +276,34 @@ public sealed class ExternalWindowHost : HwndHost
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
     private static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+}
+
+public sealed class ExternalHostKeyEventArgs : EventArgs
+{
+    public ExternalHostKeyEventArgs(Key key, ModifierKeys modifiers)
+    {
+        Key = key;
+        Modifiers = modifiers;
+    }
+
+    public Key Key { get; }
+
+    public ModifierKeys Modifiers { get; }
+
+    public bool Handled { get; set; }
+}
+
+public sealed class ExternalHostTextEventArgs : EventArgs
+{
+    public ExternalHostTextEventArgs(string text, ModifierKeys modifiers)
+    {
+        Text = text;
+        Modifiers = modifiers;
+    }
+
+    public string Text { get; }
+
+    public ModifierKeys Modifiers { get; }
+
+    public bool Handled { get; set; }
 }

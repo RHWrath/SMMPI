@@ -215,7 +215,8 @@
                         MinHeight="320"
                         Background="{DynamicResource Theme_BackgroundBrush}">
                     <Grid>
-                        <services:ExternalWindowHost ProcessId="{Binding ScrcpyProcessId}"
+                        <services:ExternalWindowHost x:Name="ScrcpyHost"
+                                                     ProcessId="{Binding ScrcpyProcessId}"
                                                      WindowTitle="{Binding ScrcpyWindowTitle}"
                                                      Focusable="True" />
                         <TextBlock HorizontalAlignment="Center"
