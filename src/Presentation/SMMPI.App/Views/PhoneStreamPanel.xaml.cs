@@ -35,7 +35,7 @@ public partial class PhoneStreamPanel
     /// <summary>
     /// Starts a touch gesture on the Android stream preview.
     /// </summary>
-    private void StreamImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private async void StreamImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (ViewModel is not { } viewModel)
         {
@@ -52,21 +52,16 @@ public partial class PhoneStreamPanel
             point.X,
             point.Y,
             DeviceTouchAction.Down);
-        _ = _pointerDownTask.ContinueWith(
-            t =>
-            {
-                if (!t.IsFaulted)
-                {
-                    return;
-                }
 
-                _ = Dispatcher.BeginInvoke(() =>
-                {
-                    StreamImage.ReleaseMouseCapture();
-                    viewModel.EndStreamInteraction();
-                });
-            },
-            TaskScheduler.Default);
+        try
+        {
+            await _pointerDownTask;
+        }
+        catch
+        {
+            StreamImage.ReleaseMouseCapture();
+            viewModel.EndStreamInteraction();
+        }
     }
 
     /// <summary>
