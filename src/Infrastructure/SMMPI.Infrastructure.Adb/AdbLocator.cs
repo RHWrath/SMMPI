@@ -31,6 +31,11 @@ public static class AdbLocator
             return path;
         }
 
+        if (TryBundledRootTools(out path))
+        {
+            return path;
+        }
+
         if (TryBundledPrototypeTools(out path))
         {
             return path;
@@ -99,6 +104,25 @@ public static class AdbLocator
         while (dir is not null)
         {
             var candidate = Path.Combine(dir.FullName, "packages", "Prototype", "platform-tools", AdbFileName);
+            if (File.Exists(candidate))
+            {
+                path = candidate;
+                return true;
+            }
+
+            dir = dir.Parent;
+        }
+
+        path = string.Empty;
+        return false;
+    }
+
+    private static bool TryBundledRootTools(out string path)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "tools", AdbFileName);
             if (File.Exists(candidate))
             {
                 path = candidate;

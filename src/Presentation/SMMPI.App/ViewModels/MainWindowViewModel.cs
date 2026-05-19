@@ -26,7 +26,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly IMediaLibraryService _mediaLibraryService;
     private readonly IPlatformDetectionService _platformDetectionService;
     private readonly IAndroidAppService _androidAppService;
-    private readonly IStreamRecordingService _recordingService;
+    private readonly IAndroidStreamingService _androidStreamingService;
+    private readonly IRecordingService _recordingService;
     private readonly IFolderPicker _folderPicker;
     private readonly ThumbnailService _thumbnailService;
     private readonly CancellationTokenSource _shutdown = new();
@@ -51,6 +52,10 @@ public sealed class MainWindowViewModel : ObservableObject
     private string _officerName = "-";
     private string _caseNumber = "-";
     private bool _isRecording;
+    private bool _audioEnabled = true;
+    private bool _isScrcpyRunning;
+    private int? _scrcpyProcessId;
+    private string? _scrcpyWindowTitle;
     private int _busyCount;
     private long _lastMoveSendTicks;
     private int _lastMoveSentX = int.MinValue;
@@ -66,7 +71,8 @@ public sealed class MainWindowViewModel : ObservableObject
         IMediaLibraryService mediaLibraryService,
         IPlatformDetectionService platformDetectionService,
         IAndroidAppService androidAppService,
-        IStreamRecordingService recordingService,
+        IAndroidStreamingService androidStreamingService,
+        IRecordingService recordingService,
         IFolderPicker folderPicker,
         ThumbnailService thumbnailService)
     {
@@ -75,11 +81,13 @@ public sealed class MainWindowViewModel : ObservableObject
         _mediaLibraryService = mediaLibraryService;
         _platformDetectionService = platformDetectionService;
         _androidAppService = androidAppService;
+        _androidStreamingService = androidStreamingService;
         _recordingService = recordingService;
         _folderPicker = folderPicker;
         _thumbnailService = thumbnailService;
 
         _streamService.FrameReceived += (_, frame) => _frames.Writer.TryWrite(frame);
+        _androidStreamingService.StateChanged += OnAndroidStreamingStateChanged;
         _ = Task.Run(ProcessFramesAsync, _shutdown.Token);
 
         BrowseMediaFolderCommand = new AsyncRelayCommand(BrowseMediaFolderAsync);
@@ -179,6 +187,36 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public string RecordButtonText => _isRecording ? "Opname stoppen" : "Scherm opnemen";
     public bool CanSendDeviceKeyboard => ConnectionStatus.StartsWith("verbonden");
+    public bool AudioEnabled
+    {
+        get => _audioEnabled;
+        set
+        {
+            if (SetProperty(ref _audioEnabled, value) && _deviceController.SelectedDevice is not null && !_isRecording)
+            {
+                _ = RestartScrcpyStreamAsync();
+            }
+        }
+    }
+
+    public bool IsScrcpyRunning
+    {
+        get => _isScrcpyRunning;
+        private set => SetProperty(ref _isScrcpyRunning, value);
+    }
+
+    public int? ScrcpyProcessId
+    {
+        get => _scrcpyProcessId;
+        private set => SetProperty(ref _scrcpyProcessId, value);
+    }
+
+    public string? ScrcpyWindowTitle
+    {
+        get => _scrcpyWindowTitle;
+        private set => SetProperty(ref _scrcpyWindowTitle, value);
+    }
+
     public System.Windows.Input.Cursor AppCursor => Volatile.Read(ref _busyCount) > 0
         ? System.Windows.Input.Cursors.Wait
         : System.Windows.Input.Cursors.Arrow;
@@ -303,19 +341,35 @@ public sealed class MainWindowViewModel : ObservableObject
     public async Task ToggleRecordingAsync()
     {
         using var _ = BeginBusy();
-        if (_isRecording)
+        try
         {
-            var path = await _recordingService.StopRecordingAsync(_shutdown.Token);
-            _isRecording = false;
-            OnPropertyChanged(nameof(RecordButtonText));
-            StatusMessage = !string.IsNullOrWhiteSpace(path) ? $"Opname opgeslagen: {path}" : "Opname gestopt.";
-            return;
-        }
+            if (_isRecording)
+            {
+                var recording = await _recordingService.StopRecordingAsync(_shutdown.Token);
+                _isRecording = false;
+                OnPropertyChanged(nameof(RecordButtonText));
+                StatusMessage = recording is not null
+                    ? $"Opname opgeslagen: {recording.OutputPath}. SHA-256: {recording.Sha256Hash}"
+                    : "Opname gestopt, maar er is geen opnamebestand gevonden.";
+                return;
+            }
 
-        await _recordingService.StartRecordingAsync(_activePlatform?.Name ?? "UnknownPlatform", _shutdown.Token);
-        _isRecording = true;
-        OnPropertyChanged(nameof(RecordButtonText));
-        StatusMessage = "Opname gestart.";
+            var device = _deviceController.SelectedDevice ?? throw new InvalidOperationException("No device selected.");
+            var result = await _recordingService.StartRecordingAsync(device, _activePlatform?.Name ?? "UnknownPlatform", AudioEnabled, _shutdown.Token);
+            if (!result.Success)
+            {
+                StatusMessage = result.Message;
+                return;
+            }
+
+            _isRecording = true;
+            OnPropertyChanged(nameof(RecordButtonText));
+            StatusMessage = string.IsNullOrWhiteSpace(result.Message) ? "Opname gestart." : result.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
     }
 
     /// <summary>
@@ -382,8 +436,21 @@ public sealed class MainWindowViewModel : ObservableObject
             await _deviceController.ConnectAsync(selected, _shutdown.Token);
             ConnectionStatus = "verbonden (USB)";
             DeviceName = selected.DisplayName;
-            StatusMessage = "ADB-stream starten...";
-            await _deviceController.StartStreamAsync(_shutdown.Token);
+            StatusMessage = "scrcpy-stream starten...";
+
+            var streamResult = await _androidStreamingService.StartAsync(
+                selected,
+                new AndroidStreamingOptions(AudioEnabled: AudioEnabled),
+                _shutdown.Token);
+
+            if (!streamResult.Success)
+            {
+                StatusMessage = streamResult.Message;
+                RaiseCommandStates();
+                return;
+            }
+
+            StatusMessage = streamResult.Message;
             await RefreshActivePlatformAsync();
             RaiseCommandStates();
         }
@@ -531,6 +598,43 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             send.RaiseCanExecuteChanged();
         }
+    }
+
+    private async Task RestartScrcpyStreamAsync()
+    {
+        var device = _deviceController.SelectedDevice;
+        if (device is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _androidStreamingService.StopAsync(_shutdown.Token);
+            var result = await _androidStreamingService.StartAsync(
+                device,
+                new AndroidStreamingOptions(AudioEnabled: AudioEnabled),
+                _shutdown.Token);
+            StatusMessage = result.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
+    }
+
+    private void OnAndroidStreamingStateChanged(object? sender, AndroidStreamingState state)
+    {
+        _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            IsScrcpyRunning = state.IsRunning;
+            ScrcpyProcessId = state.ProcessId;
+            ScrcpyWindowTitle = state.WindowTitle;
+            if (!string.IsNullOrWhiteSpace(state.WarningMessage))
+            {
+                StatusMessage = state.WarningMessage;
+            }
+        });
     }
 
     /// <summary>

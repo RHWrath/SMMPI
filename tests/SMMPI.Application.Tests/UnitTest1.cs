@@ -186,48 +186,65 @@ public class Tests
     }
 
     [Test]
-    public void FfmpegStreamRecordingService_SanitizesPlatformNameForFileName()
+    public void ScrcpyCommandBuilder_AddsSerialAudioAndRecordingOptions()
     {
+        var args = new ScrcpyCommandBuilder().BuildArguments(
+            "ABC123",
+            new AndroidStreamingOptions(AudioEnabled: true, RecordPath: @"C:\cases\rec.mp4", WindowTitle: "SMMPI scrcpy"),
+            includeAudio: true);
+
         Assert.Multiple(() =>
         {
-            Assert.That(FfmpegStreamRecordingService.SanitizeName("Snap:chat/Test"), Is.EqualTo("Snap_chat_Test"));
-            Assert.That(FfmpegStreamRecordingService.SanitizeName("   "), Is.EqualTo("recording"));
+            Assert.That(args, Does.Contain("--serial"));
+            Assert.That(args, Does.Contain("ABC123"));
+            Assert.That(args, Does.Contain("--max-fps"));
+            Assert.That(args, Does.Contain("30"));
+            Assert.That(args, Does.Contain("--max-size"));
+            Assert.That(args, Does.Contain("1280"));
+            Assert.That(args, Does.Contain("--window-title"));
+            Assert.That(args, Does.Contain("SMMPI scrcpy"));
+            Assert.That(args, Does.Contain("--audio-codec=aac"));
+            Assert.That(args, Does.Contain(@"--record=C:\cases\rec.mp4"));
+            Assert.That(args, Does.Contain("--record-format=mp4"));
+            Assert.That(args, Does.Not.Contain("--no-audio"));
         });
     }
 
     [Test]
-    public void FfmpegStreamRecordingService_StartRecordingRequiresSession()
+    public void ScrcpyCommandBuilder_DisablesAudioWhenRequested()
     {
-        var recorder = new FfmpegStreamRecordingService(new FakeStreamService(), "ffmpeg");
+        var args = new ScrcpyCommandBuilder().BuildArguments("ABC123", new AndroidStreamingOptions(), includeAudio: false);
 
-        var ex = Assert.ThrowsAsync<InvalidOperationException>(
-            () => recorder.StartRecordingAsync("Snapchat", CancellationToken.None));
-
-        Assert.That(ex?.Message, Is.EqualTo("No recording session has been configured."));
+        Assert.That(args, Does.Contain("--no-audio"));
     }
 
     [Test]
-    public async Task FfmpegStreamRecordingService_StartRecordingRequiresReceivedFrame()
+    public void ScrcpyRecordingService_SanitizesPlatformNameForFileName()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(ScrcpyRecordingService.SanitizeName("Snap:chat/Test"), Is.EqualTo("Snap_chat_Test"));
+            Assert.That(ScrcpyRecordingService.SanitizeName("   "), Is.EqualTo("recording"));
+        });
+    }
+
+    [Test]
+    public async Task Sha256FileHasher_ComputesExpectedHash()
     {
         var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        var recorder = new FfmpegStreamRecordingService(new FakeStreamService(), "ffmpeg");
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "evidence.bin");
 
         try
         {
-            await recorder.StartSessionAsync("Officer", "Case-1", root, CancellationToken.None);
+            await File.WriteAllTextAsync(path, "abc");
+            var hash = await new Sha256FileHasher().ComputeAsync(path, CancellationToken.None);
 
-            var ex = Assert.ThrowsAsync<InvalidOperationException>(
-                () => recorder.StartRecordingAsync("Snapchat", CancellationToken.None));
-
-            Assert.That(ex?.Message, Is.EqualTo("No stream frame has been received yet."));
+            Assert.That(hash, Is.EqualTo("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
         }
         finally
         {
-            await recorder.DisposeAsync();
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
+            Directory.Delete(root, recursive: true);
         }
     }
 

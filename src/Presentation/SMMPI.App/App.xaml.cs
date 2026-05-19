@@ -52,9 +52,13 @@ public partial class App : System.Windows.Application
         var services = new ServiceCollection();
 
         services.AddSingleton<IAdbClient, AdbService>();
+        services.AddSingleton<IToolPathService, ToolPathService>();
+        services.AddSingleton<ScrcpyCommandBuilder>();
+        services.AddSingleton<Sha256FileHasher>();
+        services.AddSingleton<IAndroidStreamingService, ScrcpyStreamingService>();
         services.AddSingleton<IAndroidAppService, AndroidAppService>();
         services.AddSingleton<IPlatformDetectionService, AdbPlatformDetectionService>();
-        services.AddSingleton<IDeviceStreamService, AdbH264MjpegStreamService>();
+        services.AddSingleton<IDeviceStreamService, AdbScreencapStreamService>();
         services.AddSingleton<IMediaPipeline, FfmpegMediaPipeline>();
         services.AddSingleton<ISessionLogService, FileSessionLogService>();
         services.AddSingleton<IDeviceController, DeviceController>();
@@ -62,7 +66,7 @@ public partial class App : System.Windows.Application
 
         services.AddSingleton<IFolderPicker, FolderBrowserPicker>();
         services.AddSingleton<ThumbnailService>();
-        services.AddSingleton<IStreamRecordingService, FfmpegStreamRecordingService>();
+        services.AddSingleton<IRecordingService, ScrcpyRecordingService>();
         services.AddTransient<MainWindowViewModel>();
 
         return services.BuildServiceProvider();

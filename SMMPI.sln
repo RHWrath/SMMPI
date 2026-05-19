@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
 		.gitignore = .gitignore
+		.github\workflows\ci-dotnet.yml = .github\workflows\ci-dotnet.yml
+		.github\workflows\ci-python.yml = .github\workflows\ci-python.yml
 		README.md = README.md
 	EndProjectSection
 EndProject

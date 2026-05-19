@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:SMMPI.App.ViewModels"
+        xmlns:services="clr-namespace:SMMPI.App.Services"
         mc:Ignorable="d"
         Title="SMMPI Operator"
         Width="1600"
@@ -102,6 +103,10 @@
                         </Grid>
 
                         <StackPanel Margin="0,20,0,0" HorizontalAlignment="Center" Orientation="Horizontal">
+                            <CheckBox Content="Audio"
+                                      IsChecked="{Binding AudioEnabled}"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,12,0" />
                             <Button Content="{Binding RecordButtonText}"
                                     Click="ToggleRecording_Click"
                                     MinWidth="120" />
@@ -210,17 +215,9 @@
                         MinHeight="320"
                         Background="{DynamicResource Theme_BackgroundBrush}">
                     <Grid>
-                        <Image x:Name="StreamImage"
-                               Source="{Binding StreamImage}"
-                               Stretch="Uniform"
-                               Focusable="True"
-                               IsEnabled="{Binding CanSendDeviceKeyboard}"
-                               KeyboardNavigation.TabNavigation="Once"
-                               PreviewKeyDown="StreamImage_PreviewKeyDown"
-                               PreviewTextInput="StreamImage_PreviewTextInput"
-                               MouseLeftButtonDown="StreamImage_MouseLeftButtonDown"
-                               MouseMove="StreamImage_MouseMove"
-                               MouseLeftButtonUp="StreamImage_MouseLeftButtonUp" />
+                        <services:ExternalWindowHost ProcessId="{Binding ScrcpyProcessId}"
+                                                     WindowTitle="{Binding ScrcpyWindowTitle}"
+                                                     Focusable="True" />
                         <TextBlock HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    FontSize="18"
@@ -228,10 +225,10 @@
                                    Text="Wachten op telefoonstream">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Setter Property="Visibility" Value="Visible" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding StreamImage}" Value="{x:Null}">
-                                            <Setter Property="Visibility" Value="Visible" />
+                                        <DataTrigger Binding="{Binding IsScrcpyRunning}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
