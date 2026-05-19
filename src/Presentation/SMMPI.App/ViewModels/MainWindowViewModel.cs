@@ -19,6 +19,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly PythonBackendClient _backend;
     private readonly IFolderPicker _folderPicker;
     private readonly ThumbnailService _thumbnailService;
+    private readonly OperatorSettingsStore _settingsStore;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Channel<PythonStreamFrame> _frames = Channel.CreateBounded<PythonStreamFrame>(new BoundedChannelOptions(1)
     {
@@ -49,11 +50,18 @@ public sealed class MainWindowViewModel : ObservableObject
     /// <summary>
     /// Wires backend events, frame processing, and UI commands for the main operator window.
     /// </summary>
-    public MainWindowViewModel(PythonBackendClient backend, IFolderPicker folderPicker, ThumbnailService thumbnailService)
+    public MainWindowViewModel(
+        PythonBackendClient backend,
+        IFolderPicker folderPicker,
+        ThumbnailService thumbnailService,
+        OperatorSettingsStore settingsStore)
     {
         _backend = backend;
         _folderPicker = folderPicker;
         _thumbnailService = thumbnailService;
+        _settingsStore = settingsStore;
+
+        LoadPersistedSettings();
 
         _backend.FrameReceived += (_, frame) => _frames.Writer.TryWrite(frame);
         _backend.EventReceived += (_, evt) => System.Windows.Application.Current.Dispatcher.Invoke(() => HandleBackendEvent(evt));
@@ -80,25 +88,49 @@ public sealed class MainWindowViewModel : ObservableObject
     public string OfficerName
     {
         get => _officerName;
-        set => SetProperty(ref _officerName, value);
+        set
+        {
+            if (SetProperty(ref _officerName, value))
+            {
+                SavePersistedSettings();
+            }
+        }
     }
 
     public string CaseNumber
     {
         get => _caseNumber;
-        set => SetProperty(ref _caseNumber, value);
+        set
+        {
+            if (SetProperty(ref _caseNumber, value))
+            {
+                SavePersistedSettings();
+            }
+        }
     }
 
     public string MediaLibraryFolder
     {
         get => _mediaLibraryFolder;
-        private set => SetProperty(ref _mediaLibraryFolder, value);
+        private set
+        {
+            if (SetProperty(ref _mediaLibraryFolder, value))
+            {
+                SavePersistedSettings();
+            }
+        }
     }
 
     public string CaseLogFolder
     {
         get => _caseLogFolder;
-        private set => SetProperty(ref _caseLogFolder, value);
+        private set
+        {
+            if (SetProperty(ref _caseLogFolder, value))
+            {
+                SavePersistedSettings();
+            }
+        }
     }
 
     public MediaItemViewModel? SelectedMedia
@@ -170,6 +202,11 @@ public sealed class MainWindowViewModel : ObservableObject
         StatusMessage = "Python-backend starten...";
         await _backend.StartAsync(_shutdown.Token);
         await _backend.SendAsync("start_adb", cancellationToken: _shutdown.Token);
+
+        if (Directory.Exists(MediaLibraryFolder))
+        {
+            await LoadMediaFolderAsync(MediaLibraryFolder);
+        }
 
         await RefreshDeviceAsync();
     }
@@ -332,8 +369,17 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         using var _ = BeginBusy();
+        await LoadMediaFolderAsync(folder);
+    }
+
+    /// <summary>
+    /// Loads media from a folder and persists that folder as the current media library.
+    /// </summary>
+    private async Task LoadMediaFolderAsync(string folder)
+    {
         MediaLibraryFolder = folder;
         MediaItems.Clear();
+        SelectedMedia = null;
         StatusMessage = "Media laden...";
         var response = await _backend.SendAsync("scan_media", new { folder }, _shutdown.Token);
         foreach (var item in response.GetProperty("items").EnumerateArray())
@@ -413,6 +459,34 @@ public sealed class MainWindowViewModel : ObservableObject
 
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return string.IsNullOrWhiteSpace(profile) ? Environment.CurrentDirectory : Path.Combine(profile, "Desktop");
+    }
+
+    /// <summary>
+    /// Restores the operator fields and folders that were saved during an earlier app session.
+    /// </summary>
+    private void LoadPersistedSettings()
+    {
+        var settings = _settingsStore.Load();
+        _officerName = settings.OfficerName ?? "";
+        _caseNumber = settings.CaseNumber ?? "";
+        _mediaLibraryFolder = settings.MediaLibraryFolder ?? "";
+        _caseLogFolder = string.IsNullOrWhiteSpace(settings.CaseLogFolder)
+            ? GetDefaultCaseRoot()
+            : settings.CaseLogFolder;
+    }
+
+    /// <summary>
+    /// Persists the current operator fields and folders for the next app startup.
+    /// </summary>
+    private void SavePersistedSettings()
+    {
+        _settingsStore.Save(new OperatorSettings
+        {
+            OfficerName = OfficerName,
+            CaseNumber = CaseNumber,
+            MediaLibraryFolder = MediaLibraryFolder,
+            CaseLogFolder = CaseLogFolder,
+        });
     }
 
     /// <summary>

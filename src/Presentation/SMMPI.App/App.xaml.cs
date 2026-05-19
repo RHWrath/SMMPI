@@ -15,7 +15,7 @@ public partial class App : System.Windows.Application
         try
         {
             _backend = new PythonBackendClient();
-            var viewModel = new MainWindowViewModel(_backend, new FolderBrowserPicker(), new ThumbnailService());
+            var viewModel = new MainWindowViewModel(_backend, new FolderBrowserPicker(), new ThumbnailService(), new OperatorSettingsStore());
             var window = new SMMPI.App.MainWindow(viewModel);
             window.Show();
             await viewModel.InitializeAsync();
