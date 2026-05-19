@@ -19,10 +19,9 @@ public partial class App : System.Windows.Application
 
         try
         {
-            _services = ConfigureServices(););
-            _backend = new PythonBackendClient();
-            var viewModel = new MainWindowViewModel(_backend, new FolderBrowserPicker(), new ThumbnailService(), new OperatorSettingsStore());
-            var window = new SMMPI.App.MainWindow(viewModel);
+            _services = ConfigureServices();
+            var viewModel = _services.GetRequiredService<MainWindowViewModel>();
+            var window = new MainWindow(viewModel);
             window.Show();
             await viewModel.InitializeAsync();
         }
@@ -67,6 +66,7 @@ public partial class App : System.Windows.Application
 
         services.AddSingleton<IFolderPicker, FolderBrowserPicker>();
         services.AddSingleton<ThumbnailService>();
+        services.AddSingleton<OperatorSettingsStore>();
         services.AddSingleton<IRecordingService, ScrcpyRecordingService>();
         services.AddTransient<MainWindowViewModel>();
 

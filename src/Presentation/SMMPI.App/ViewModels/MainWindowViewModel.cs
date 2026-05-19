@@ -355,7 +355,13 @@ public sealed class MainWindowViewModel : ObservableObject
     /// <summary>
     /// Starts or stops screen recording for the current stream preview rectangle.
     /// </summary>
-    public async Task ToggleRecordingAsync()
+    public Task ToggleRecordingAsync() =>
+        ToggleRecordingAsync("SMMPI Operator", new Rect(0, 0, 1280, 720));
+
+    /// <summary>
+    /// Starts or stops screen recording for the current stream preview rectangle.
+    /// </summary>
+    public async Task ToggleRecordingAsync(string windowTitle, Rect captureRect)
     {
         using var _ = BeginBusy();
         try
@@ -372,6 +378,12 @@ public sealed class MainWindowViewModel : ObservableObject
             }
 
             var device = _deviceController.SelectedDevice ?? throw new InvalidOperationException("No device selected.");
+            await _recordingService.StartSessionAsync(
+                NormalizeOptionalText(OfficerName) ?? "Onbekende operator",
+                NormalizeOptionalText(CaseNumber) ?? DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture),
+                GetCaseRoot(),
+                _shutdown.Token);
+
             var result = await _recordingService.StartRecordingAsync(device, _activePlatform?.Name ?? "UnknownPlatform", AudioEnabled, _shutdown.Token);
             if (!result.Success)
             {
@@ -383,36 +395,18 @@ public sealed class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(RecordButtonText));
             StatusMessage = string.IsNullOrWhiteSpace(result.Message) ? "Opname gestart." : result.Message;
         }
-
-        await _backend.SendAsync(
-            "start_recording",
-            new
-            {
-                x = (int)Math.Max(0, captureRect.X),
-                y = (int)Math.Max(0, captureRect.Y),
-                width = (int)Math.Max(2, captureRect.Width),
-                height = (int)Math.Max(2, captureRect.Height),
-                windowTitle,
-                officerName = NormalizeOptionalText(OfficerName),
-                caseNumber = NormalizeOptionalText(CaseNumber),
-                caseRoot = GetCaseRoot(),
-                caseFolder = GetRecordingFolder(),
-            },
-            _shutdown.Token);
-        _isRecording = true;
-        OnPropertyChanged(nameof(RecordButtonText));
-        StatusMessage = "Opname gestart.";
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
     }
 
     /// <summary>
     /// Updates the recording crop after the window or stream preview changes size.
     /// </summary>
-    public async Task UpdateRecordingCropAsync(Rect captureRect)
+    public Task UpdateRecordingCropAsync(Rect captureRect)
     {
-        if (!_isRecording)
-        {
-            StatusMessage = ex.Message;
-        }
+        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -160,7 +160,7 @@ public class Tests
 
         Assert.Multiple(() =>
         {
-            Assert.That(command.Arguments, Does.Contain("-vf \"transpose=2,hflip,scale=1920:-1,crop=1920:1080,fps=30\""));
+            Assert.That(command.Arguments, Does.Contain("-vf \"transpose=2,hflip,scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,fps=30\""));
             Assert.That(command.Arguments, Does.Contain("-c:v libx264"));
             Assert.That(command.Arguments, Does.Contain("-c:a aac"));
             Assert.That(command.Arguments, Does.Contain("-b:a 128k"));
@@ -180,7 +180,7 @@ public class Tests
         {
             Assert.That(command.Arguments, Does.Contain("-loop 1"));
             Assert.That(command.Arguments, Does.Contain("-t 10"));
-            Assert.That(command.Arguments, Does.Contain("-vf \"transpose=2,hflip,scale=1920:-1,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,fps=30\""));
+            Assert.That(command.Arguments, Does.Contain("-vf \"transpose=2,hflip,scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,fps=30\""));
             Assert.That(command.Arguments, Does.Contain("-pix_fmt yuv420p"));
         });
     }
