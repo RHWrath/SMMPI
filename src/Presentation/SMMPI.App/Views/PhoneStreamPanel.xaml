@@ -14,10 +14,11 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock FontSize="22" FontWeight="SemiBold" Text="Telefoonstream" />
                     <TextBlock Margin="0,6,0,0"
                                Foreground="{DynamicResource Theme_MutedTextBrush}"
+                               TextWrapping="Wrap"
                                Text="{Binding StatusMessage}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">

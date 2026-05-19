@@ -503,7 +503,7 @@ public sealed class MainWindowViewModel : ObservableObject
             {
                 ConnectionStatus = "niet verbonden";
                 DeviceName = "-";
-                StatusMessage = "Geen Android-telefoon gevonden. Zet USB-debugging aan en klik op Telefoon vernieuwen.";
+                StatusMessage = "Geen Android-telefoon gevonden. Zet USB-debugging aan en klik op Stream verversen.";
                 RaiseCommandStates();
                 return;
             }
