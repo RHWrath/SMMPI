@@ -9,7 +9,7 @@ import tkinter as tk
 from utils import get_adb_path,  get_scrcpy_server_path
 
 def start_adb_server():
-    """Start ADB server if bundled or system ADB is available, otherwise show error and exit."""
+    """Start ADB server if bundled or system ADB is available, else show error and exit."""
 
     adb_path = get_adb_path()
 
