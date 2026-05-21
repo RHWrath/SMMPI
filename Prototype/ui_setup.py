@@ -35,40 +35,13 @@ class UISetup:
     @staticmethod
     def create_main_frame(parent):
         main_frame = ctk.CTkFrame(parent)
-        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        main_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         main_frame.grid_columnconfigure(0, weight=2)
         main_frame.grid_columnconfigure(1, weight=4)
         main_frame.grid_rowconfigure(0, weight=4)
         main_frame.grid_rowconfigure(1, weight=1)
 
         return main_frame
-
-    @staticmethod
-    def setup_top_toolbar(parent):
-        """
-        Top-of-window toolbar strip. Buttons in here are hidden by default
-        and shown after login by the calling code.
-        """
-        toolbar = ctk.CTkFrame(parent, fg_color="transparent", height=40)
-        toolbar.pack(fill="x", padx=10, pady=(8, 0))
-
-        add_platform_button = ctk.CTkButton(
-            toolbar,
-            text="+ Add Platform",
-            corner_radius=20,
-            font=("Arial", 12),
-            width=140,
-        )
-        manage_platforms_button = ctk.CTkButton(
-            toolbar,
-            text="Manage Platforms",
-            corner_radius=20,
-            font=("Arial", 12),
-            width=160,
-        )
-        # Don't pack yet — main.py packs them after login
-
-        return toolbar, add_platform_button, manage_platforms_button
 
     @staticmethod
     def setup_left_panel(parent, on_folder_select_callback):
@@ -231,7 +204,7 @@ class UISetup:
     def setup_topbar(parent, on_menu_click):
         topbar = ctk.CTkFrame(
             parent,
-            height=42,
+            height=56,
             fg_color="#1f1f1f",
             corner_radius=0
         )
@@ -248,7 +221,7 @@ class UISetup:
             hover_color="#333333",
             command=on_menu_click
         )
-        menu_button.pack(side="left", padx=8, pady=5)
+        menu_button.pack(side="left", padx=(12, 8), pady=0)
 
         session_label = ctk.CTkLabel(
             topbar,
@@ -256,7 +229,7 @@ class UISetup:
             font=("Arial", 11),
             text_color="#4A9EFF"
         )
-        session_label.pack(side="left", padx=10)
+        session_label.pack(side="left", padx=(8, 0), pady=0)
 
         return topbar, menu_button, session_label
 
@@ -309,10 +282,10 @@ class UISetup:
         manage_platforms_btn.pack(fill="x", padx=10, pady=5)
         # Hidden until login
 
-        settings_btn = ctk.CTkButton(
-            sidebar,
-            text="Settings"
-        )
-        settings_btn.pack(fill="x", padx=10, pady=(25, 5))
+        #settings_btn = ctk.CTkButton(
+        #    sidebar,
+        #    text="Settings"
+        #)
+        #settings_btn.pack(fill="x", padx=10, pady=(25, 5))
 
         return sidebar, new_case_btn, open_case_btn, platform_section_label, add_platform_btn, manage_platforms_btn

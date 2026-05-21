@@ -76,18 +76,12 @@ class MediaDisplayApp:
             self._open_manage_platforms,
         )
         self.sidebar_visible = False
-
+      
         # Recording
         self.recording_manager = RecordingManager()
         self._recording_resize_after_id = None
         self._recording_start_time = None
         self._recording_timer_after_id = None
-
-        # Top toolbar (buttons stay hidden until login completes)
-        self.top_toolbar, self.add_platform_button, self.manage_platforms_button = \
-            UISetup.setup_top_toolbar(self.app)
-        self.add_platform_button.configure(command=self._open_add_platform_wizard)
-        self.manage_platforms_button.configure(command=self._open_manage_platforms)
 
         main_frame = UISetup.create_main_frame(self.app)
 
@@ -103,21 +97,10 @@ class MediaDisplayApp:
 
         self.image_display = ImageDisplay(self.media_scroll_frame)
 
-        self.add_device_status()
-        self.add_platform_status()
         
         self.app.bind("<Configure>", self._on_window_configure)
         
         self.app.state("zoomed")
-        # Pre-created without packing — kept as attributes so _handle_disconnect
-        # and update_platform_status don't crash, but not visible in the UI.
-        self.device_status_label = ctk.CTkLabel(
-            self.right_panel, text="", font=("Arial", 10)
-        )
-        self.platform_status_label = ctk.CTkLabel(
-            self.right_panel, text="", font=("Arial", 10)
-        )
-        
         
     def maximize_windowed_fullscreen(self):
         self.app.deiconify()
@@ -197,7 +180,6 @@ class MediaDisplayApp:
             self.sidebar.place(x=0, y=42, relheight=1.0)
             self.sidebar.lift()
             self.sidebar_visible = True
-
     def update_toolbar_session_label(self):
         if not hasattr(self, "session_toolbar_label"):
             return
@@ -367,29 +349,6 @@ class MediaDisplayApp:
 
         self.device_manager.show_device_selection()
 
-    def add_platform_status(self):
-        self.platform_status_label = ctk.CTkLabel(
-            self.right_panel,
-            text="Platform: None detected",
-            font=("Arial", 10),
-            text_color="gray"
-        )
-        self.platform_status_label.pack(pady=(0, 5))
-
-    def update_platform_status(self, platform):
-        if not hasattr(self, "platform_status_label") or not self.platform_status_label.winfo_exists():
-            self.add_platform_status()
-
-        if platform:
-            self.platform_status_label.configure(
-                text=f"Platform: {platform['name']}",
-                text_color="green"
-            )
-        else:
-            self.platform_status_label.configure(
-                text="Platform: None detected",
-                text_color="red"
-            )
 
     def detect_active_platform_with_retry(self, attempts=6, delay=1):
         detected_platform = None
@@ -584,7 +543,6 @@ class MediaDisplayApp:
 
     def on_device_selected(self, device):
         self.selected_device = device
-        self.add_device_status()
         self.close_app_button.configure(state="normal", command=self.close_foreground_app)
         self.start_stream()
         self._start_connection_monitor()
