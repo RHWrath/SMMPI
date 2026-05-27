@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from tkinter import Canvas
+from about_software_manager import AboutSoftwareManager
 
 
 def show_toast(parent, message, duration=2500, fg_color="#2fa572", text_color="white"):
@@ -289,3 +290,93 @@ class UISetup:
         #settings_btn.pack(fill="x", padx=10, pady=(25, 5))
 
         return sidebar, new_case_btn, open_case_btn, platform_section_label, add_platform_btn, manage_platforms_btn
+    
+    
+    @staticmethod
+    def show_about_popup(parent):
+        """
+        Shows application version information and release notes.
+        This belongs to UISetup because it only builds the popup UI.
+        The version/release data is loaded by AboutSoftwareManager.
+        """
+        version_info = AboutSoftwareManager.load_version_info()
+        release_notes = AboutSoftwareManager.load_release_notes()
+
+        popup = ctk.CTkToplevel(parent)
+        popup.title("About ADB Media Manager")
+        popup.geometry("620x520")
+        popup.minsize(520, 420)
+        popup.transient(parent)
+        popup.grab_set()
+
+        popup.geometry("+{}+{}".format(
+            int(parent.winfo_screenwidth() / 2 - 310),
+            int(parent.winfo_screenheight() / 2 - 260)
+        ))
+
+        container = ctk.CTkFrame(popup)
+        container.pack(fill="both", expand=True, padx=18, pady=18)
+
+        title_label = ctk.CTkLabel(
+            container,
+            text=version_info["app_name"],
+            font=("Arial", 20, "bold"),
+            text_color="#4A9EFF"
+        )
+        title_label.pack(anchor="w", pady=(0, 6))
+
+        version_label = ctk.CTkLabel(
+            container,
+            text=f"Version: {version_info['version']}",
+            font=("Arial", 13),
+            text_color="gray90"
+        )
+        version_label.pack(anchor="w")
+
+        build_label = ctk.CTkLabel(
+            container,
+            text=f"Build: {version_info['build']}",
+            font=("Arial", 12),
+            text_color="gray65"
+        )
+        build_label.pack(anchor="w", pady=(0, 6))
+
+        description_label = ctk.CTkLabel(
+            container,
+            text=version_info["description"],
+            font=("Arial", 12),
+            text_color="gray65",
+            wraplength=560,
+            justify="left"
+        )
+        description_label.pack(anchor="w", pady=(0, 14))
+        
+        release_title = ctk.CTkLabel(
+            container,
+            text="Release notes",
+            font=("Arial", 15, "bold")
+        )
+        release_title.pack(anchor="w", pady=(4, 6))
+
+        release_textbox = ctk.CTkTextbox(
+            container,
+            wrap="word",
+            font=("Consolas", 11)
+        )
+        release_textbox.pack(fill="both", expand=True)
+
+        release_textbox.insert("1.0", release_notes)
+        release_textbox.configure(state="disabled")
+
+        button_row = ctk.CTkFrame(container, fg_color="transparent")
+        button_row.pack(fill="x", pady=(14, 0))
+
+        close_button = ctk.CTkButton(
+            button_row,
+            text="Close",
+            width=120,
+            command=popup.destroy
+        )
+        close_button.pack(side="right")
+
+        popup.protocol("WM_DELETE_WINDOW", popup.destroy)

@@ -18,6 +18,7 @@ from platform_management import get_active_platform
 from platform_wizard import PlatformWizard, PlatformEditor
 from recording_manager import RecordingManager
 from case_manager import CaseManager
+from about_software_manager import AboutSoftwareManager
 
 
 class MediaDisplayApp:
@@ -53,6 +54,8 @@ class MediaDisplayApp:
         
 
         # Recording
+        self._ignore_configure_until = 0
+        self._is_restoring_locked_geometry = False
         self.recording_manager = RecordingManager()
         self._last_sent_crop = None
         self._recording_start_time = None
@@ -76,6 +79,13 @@ class MediaDisplayApp:
             self._open_manage_platforms,
         )
         self.sidebar_visible = False
+        
+        self.about_button = ctk.CTkButton(
+            self.sidebar,
+            text="About",
+            command=lambda: UISetup.show_about_popup(self.app)
+        )
+        self.about_button.pack(side="bottom", fill="x", padx=12, pady=(8, 54))
       
         # Recording
         self.recording_manager = RecordingManager()
@@ -574,59 +584,101 @@ class MediaDisplayApp:
             print(f"[ERROR] close_foreground_app: {e}")
 
     def run(self):
-        def on_close():
-            # If a recording is running, force the user to make a conscious choice
-            # before tearing anything down. Otherwise ffmpeg gets killed mid-write
-            # and the video is unusable.
-            if self.recording_manager.is_recording():
-                choice = self._confirm_close_while_recording()
-
-                if choice == "cancel":
-                    # User wants to keep recording — abort the close entirely
-                    print("[+] Close cancelled, recording continues")
-                    return
-
-                if choice == "stop_and_close":
-                    print("[+] Stopping recording before close...")
-                    try:
-                        self.recording_manager.stop_recording()
-                        self._resize_lock_geometry = None
-                        self._resize_warning_active = False
-                        self.app.resizable(True, True)
-                        
-                    except Exception as e:
-                        print(f"[ERROR] Failed to stop recording cleanly on close: {e}")
-                        show_toast(
-                            self.app,
-                            "Recording stop failed - check the case folder for the .mkv temp file",
-                            fg_color="#d94040",
-                            duration=4000
-                        )
-
-                    # Cancel the timer so it doesn't tick into a destroyed window
-                    if self._recording_timer_after_id is not None:
-                        try:
-                            self.app.after_cancel(self._recording_timer_after_id)
-                        except Exception:
-                            pass
-                        self._recording_timer_after_id = None
-
-                elif choice == "force_close":
-                    print("[!] Force close requested - recording will be lost")
-                    # Fall through to the rest of teardown without stopping ffmpeg
-                    # gracefully. The process will die with the parent.
-
-            # Normal teardown path
+        def finish_close():
+            """
+            Final teardown path.
+            This should only run when no recording is actively being saved.
+            """
             self._stop_connection_monitor()
-            if self.stream:
-                self.stream.stop()
 
-            # Log where evidence would be saved
+            if self.stream:
+                try:
+                    self.stream.stop()
+                except Exception as e:
+                    print(f"[!] Error stopping stream during close: {e}")
+                self.stream = None
+
             if self.session:
                 print(f"[+] Session ended. Evidence path: {self.session.get_evidence_path()}")
 
             stop_adb_server()
             self.app.destroy()
+
+        def on_close():
+            if self.recording_manager.is_stopping():
+                show_toast(
+                    self.app,
+                    "Recording is still saving. Please wait.",
+                    fg_color="#d94040",
+                    duration=3000
+                )
+                print("[!] Close blocked: recording is still saving")
+                return
+
+            if self.recording_manager.is_recording():
+                choice = self._confirm_close_while_recording()
+
+                if choice == "cancel":
+                    print("[+] Close cancelled, recording continues")
+                    return
+
+                if choice == "stop_and_close":
+                    print("[+] Stopping recording before close...")
+
+                    self.record_button.configure(state="disabled")
+                    self.info_label.configure(text="Stopping recording before closing...")
+
+                    def close_after_save(final_file_path):
+                        def update_ui_and_close():
+                            print(f"[+] Recording saved before close: {final_file_path}")
+
+                            self._reset_recording_ui_after_stop()
+
+                            if self._recording_timer_after_id is not None:
+                                try:
+                                    self.app.after_cancel(self._recording_timer_after_id)
+                                except Exception:
+                                    pass
+                                self._recording_timer_after_id = None
+
+                            finish_close()
+
+                        self.app.after(0, update_ui_and_close)
+
+                    def close_after_error(error):
+                        def update_ui_after_error():
+                            print(f"[ERROR] Failed to stop recording cleanly on close: {error}")
+
+                            self._reset_recording_ui_after_stop()
+
+                            show_toast(
+                                self.app,
+                                "Recording stop failed - check the case folder for the .mkv temp file",
+                                fg_color="#d94040",
+                                duration=5000
+                            )
+
+                            # Do not destroy immediately after a failed save.
+                            # Safer default: keep the app open so the user can inspect the issue.
+                            self.info_label.configure(
+                                text="Recording stop failed - app kept open for safety"
+                            )
+
+                        self.app.after(0, update_ui_after_error)
+
+                    self.recording_manager.stop_recording_async(
+                        on_success=close_after_save,
+                        on_error=close_after_error
+                    )
+
+                    return
+
+                if choice == "force_close":
+                    print("[!] Force close requested - recording may be incomplete")
+                    finish_close()
+                    return
+
+            finish_close()
 
         self.app.protocol("WM_DELETE_WINDOW", on_close)
 
@@ -649,7 +701,25 @@ class MediaDisplayApp:
                 f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}"
             )
 
-            # Step 2: Device selection (existing flow)
+            # Optional recovery check for unfinished temp recordings
+            try:
+                recovered_files = self.recording_manager.recover_temp_recordings(
+                    self.session.case_path
+                )
+
+                if recovered_files:
+                    show_toast(
+                        self.app,
+                        f"Recovered {len(recovered_files)} unfinished recording(s)",
+                        fg_color="#2f7d32",
+                        duration=4000
+                    )
+                    print(f"[+] Recovered recordings: {recovered_files}")
+
+            except Exception as e:
+                print(f"[WARN] Recording recovery check failed: {e}")
+
+            # Step 2: Device selection
             self.device_manager.show_device_selection()
 
         self.app.after(0, startup_flow)
@@ -667,40 +737,113 @@ class MediaDisplayApp:
 
         return (x, y, width, height)
 
+    def _reset_recording_ui_after_stop(self):
+        """
+        Reset all recording-related UI state after the recording has stopped.
+        This must run on the Tkinter main thread.
+        """
+        self.record_button.configure(
+            text="⏺",
+            fg_color="#1f6aa5",
+            hover_color="#144870",
+            state="normal"
+        )
+
+        self._last_sent_crop = None
+
+        self._resize_lock_geometry = None
+        self._resize_warning_active = False
+        
+
+        self.video_border_frame.configure(fg_color="black")
+
+        if self._recording_timer_after_id is not None:
+            try:
+                self.app.after_cancel(self._recording_timer_after_id)
+            except Exception:
+                pass
+            self._recording_timer_after_id = None
+
+        self._recording_start_time = None
+        self.recording_timer_label.configure(
+            text="00:00:00",
+            text_color="gray60"
+        )
+
+    def _on_recording_saved(self, final_file_path):
+        """
+        Called after async recording stop/remux succeeds.
+        This method is called from the worker thread, so UI updates are forwarded
+        to the Tkinter main thread using app.after().
+        """
+        def update_ui():
+            self._reset_recording_ui_after_stop()
+            self.info_label.configure(text="Recording saved")
+            show_toast(
+                self.app,
+                "Recording saved successfully",
+                fg_color="#2f7d32",
+                duration=3000
+            )
+            print(f"[+] Recording saved: {final_file_path}")
+
+        self.app.after(0, update_ui)
+        
+        
+    def _on_recording_stop_failed(self, error):
+        """
+        Called after async recording stop/remux fails.
+        This method is called from the worker thread, so UI updates are forwarded
+        to the Tkinter main thread using app.after().
+        """
+        def update_ui():
+            self._reset_recording_ui_after_stop()
+
+            self.info_label.configure(
+                text="Recording stop failed - check temp MKV file"
+            )
+
+            show_toast(
+                self.app,
+                "Recording stop failed - check the case folder for the .mkv temp file",
+                fg_color="#d94040",
+                duration=5000
+            )
+
+            print(f"[ERROR] Recording stop failed: {error}")
+
+        self.app.after(0, update_ui)
+        
+        
     def toggle_recording(self):
-        # Stop Recoring Logic
         try:
+            # Stop Recording Logic
             if self.recording_manager.is_recording():
-                self.recording_manager.stop_recording()
-                self.record_button.configure(text="⏺", fg_color="#1f6aa5", hover_color="#144870")
-                self.info_label.configure(text="Recording stopped")
-                self._last_sent_crop = None
-                
-                self._resize_lock_geometry = None
-                self._resize_warning_active = False
-                self.app.resizable(True, True)
+                if self.recording_manager.is_stopping():
+                    self.info_label.configure(text="Recording is already stopping...")
+                    return
 
-                self.video_border_frame.configure(fg_color="black")
+                self.record_button.configure(state="disabled")
+                self.info_label.configure(text="Stopping recording...")
 
-                if self._recording_timer_after_id is not None:
-                    try:
-                        self.app.after_cancel(self._recording_timer_after_id)
-                    except Exception:
-                        pass
-                    self._recording_timer_after_id = None
+                self.recording_manager.stop_recording_async(
+                    on_success=self._on_recording_saved,
+                    on_error=self._on_recording_stop_failed
+                )
 
-                self._recording_start_time = None
-                self.recording_timer_label.configure(text="00:00:00", text_color="gray60")
+                return
+
+            if self.recording_manager.is_stopping():
+                self.info_label.configure(text="Recording is still saving...")
                 return
 
             if not self.session:
                 self.info_label.configure(text="No active case session.")
                 return
 
-
-
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
             self._last_sent_crop = (x, y, w, h)
+
             print(f"[DEBUG] Relative canvas geometry: x={x}, y={y}, w={w}, h={h}")
             print(f"[DEBUG] App root: x={self.app.winfo_rootx()}, y={self.app.winfo_rooty()}")
             print(f"[DEBUG] Canvas root: x={self.video_canvas.winfo_rootx()}, y={self.video_canvas.winfo_rooty()}")
@@ -714,7 +857,8 @@ class MediaDisplayApp:
                 self.app.winfo_y()
             )
 
-            self.app.resizable(False, False)
+            # Ignore internal configure events caused by UI updates during recording start.
+            self._ignore_configure_until = time.time() + 0.5
 
             self.recording_manager.create_session(
                 case_folder=self.session.case_path,
@@ -725,9 +869,19 @@ class MediaDisplayApp:
                 window_title=self.app.title(),
                 audio_device=None
             )
-            # Start recording Logic
+
+            # Start Recording Logic
             self.recording_manager.start_recording()
-            self.record_button.configure(text="⏹", fg_color="#d94040", hover_color="#b33030")
+            
+            self.app.after(500, self._check_recording_started)
+
+            self.record_button.configure(
+                text="⏹",
+                fg_color="#d94040",
+                hover_color="#b33030",
+                state="normal"
+            )
+
             self.info_label.configure(text="Recording started")
 
             # Add red border to video canvas to indicate recording
@@ -739,9 +893,29 @@ class MediaDisplayApp:
             self._update_recording_timer()
 
         except Exception as e:
+            self.record_button.configure(state="normal")
             self.info_label.configure(text=f"Recording error: {str(e)}")
-            print(f"[ERROR] toggle_recording: {e}")
+            print(f"[ERROR] toggle_recording: {e}")        
+        
+        
+    def _check_recording_started(self):
+        if not self.recording_manager.current_session:
+            return
 
+        if not self.recording_manager.is_recording():
+            self.info_label.configure(text="Recording failed to start")
+            self.record_button.configure(
+                text="⏺",
+                fg_color="#1f6aa5",
+                hover_color="#144870",
+                state="normal"
+            )
+            self.video_border_frame.configure(fg_color="black")
+            
+            return
+
+        print("[+] Recording confirmed running after startup check")
+   
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
             print(f"[DEBUG] Not updating timer - recording not active {self.recording_manager.is_recording()}")
@@ -762,12 +936,11 @@ class MediaDisplayApp:
         
     def _on_window_configure(self, event):
         """
-        Prevent window resizing while recording.
+        Soft-lock window resizing while recording.
 
-        Without ZMQ dynamic crop updates, the recording crop area is calculated once
-        at recording start. If the window is resized during recording, the captured
-        area no longer matches the device canvas. Therefore, the window size is locked
-        while recording is active.
+        Instead of using app.resizable(False, False), which can cause a full white
+        redraw/flicker on Windows, we keep the window technically resizable but
+        restore it back to the locked size if the user changes it.
         """
         if event.widget != self.app:
             return
@@ -781,12 +954,33 @@ class MediaDisplayApp:
         if not self._resize_lock_geometry:
             return
 
+        # Ignore configure events triggered internally during recording start.
+        if time.time() < self._ignore_configure_until:
+            return
+
+        # Avoid reacting to our own geometry restore.
+        if self._is_restoring_locked_geometry:
+            return
+
         locked_width, locked_height, locked_x, locked_y = self._resize_lock_geometry
 
         current_width = self.app.winfo_width()
         current_height = self.app.winfo_height()
+        current_x = self.app.winfo_x()
+        current_y = self.app.winfo_y()
 
-        if current_width == locked_width and current_height == locked_height:
+        size_changed = (
+            current_width != locked_width
+            or current_height != locked_height
+        )
+
+        position_changed = (
+            current_x != locked_x
+            or current_y != locked_y
+        )
+
+        # Only block actual resize, not normal internal layout/configure events.
+        if not size_changed:
             return
 
         if self._resize_restore_after_id is not None:
@@ -798,8 +992,16 @@ class MediaDisplayApp:
             if not self.recording_manager.is_recording():
                 return
 
-            geometry = f"{locked_width}x{locked_height}+{locked_x}+{locked_y}"
-            self.app.geometry(geometry)
+            if not self._resize_lock_geometry:
+                return
+
+            self._is_restoring_locked_geometry = True
+
+            try:
+                geometry = f"{locked_width}x{locked_height}+{locked_x}+{locked_y}"
+                self.app.geometry(geometry)
+            finally:
+                self.app.after(100, lambda: setattr(self, "_is_restoring_locked_geometry", False))
 
             if not self._resize_warning_active:
                 self._resize_warning_active = True
@@ -811,7 +1013,10 @@ class MediaDisplayApp:
                     duration=3000
                 )
 
-                self.app.after(3200, lambda: setattr(self, "_resize_warning_active", False))
+                self.app.after(
+                    3200,
+                    lambda: setattr(self, "_resize_warning_active", False)
+                )
 
             print("[!] Resize blocked: recording is active and dynamic crop update is disabled")
 

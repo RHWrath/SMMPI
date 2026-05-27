@@ -1,6 +1,3 @@
-ADB Media Manager — v1.0.0
-Release Date: 11-05-2026
-
 Initial stable prototype release of the ADB Media Manager system.
 
 ----------------------------------------
