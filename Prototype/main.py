@@ -67,7 +67,6 @@ class MediaDisplayApp:
         self._resize_warning_active = False
         self._resize_restore_after_id = None
 
-
         #Audio
         self.trigger_listener = None
         self.selected_audio_path = None
@@ -426,7 +425,7 @@ class MediaDisplayApp:
 
         # Detect which platform is in the foreground
         platform = self.detect_active_platform_with_retry()
-        
+    
 
         if platform is None:
             self.info_label.configure(text="No supported platform detected.")
@@ -910,8 +909,6 @@ class MediaDisplayApp:
             self.record_button.configure(state="normal")
             self.info_label.configure(text=f"Recording error: {str(e)}")
             print(f"[ERROR] toggle_recording: {e}")        
-
-            print("[+] Recording confirmed running after startup check")
         
         
     def _check_recording_started(self):
@@ -927,54 +924,6 @@ class MediaDisplayApp:
                 state="normal"
             )
             self.video_border_frame.configure(fg_color="black")
-            self.info_label.configure(text=f"Recording error: {str(e)}")
-            print(f"[ERROR] toggle_recording: {e}")
-
-    def start_trigger_listener(self):
-        #check if there is an older listener already running
-        if self.trigger_listener:
-            self.trigger_listener.stop()
-            self.trigger_listener = None
-
-        #create a new AdbTriggerListener object
-        self.trigger_listener = AdbTriggerListener(
-            device_serial=self.selected_device.serial, 
-            on_trigger=lambda message: self.app.after(
-                0,
-                lambda: self.handle_android_trigger(message)
-            )
-        )
-        #backgroung log watching 
-        self.trigger_listener.start()               
-    
-    def handle_android_trigger(self, message):
-        print(f"[+] Android trigger received: {message}")
-        self.info_label.configure(text=f"Android trigger received: {message}")
-        
-        if "AUDIO_LISTENER_EVENT type=MIC_OPEN" not in message:
-            return
-        
-        if "sources=VOICE_RECOGNITION" in message:
-            return
-
-        if not self.selected_audio_path:
-            self.info_label.configure(text="No audio file selected.")
-            return
-        
-        self.info_label.configure(text="Trigger received. Playing selected audio")
-        self.play_selected_audio()
-
-    def play_selected_audio(self):
-        self.audio_player.play(
-            self.selected_audio_path,
-            on_finished=self.handle_audio_finished
-        )
-
-    def handle_audio_finished(self):
-        self.app.after(
-            0,
-            lambda: self.info_label.configure(text="Audio playback finished")
-        )
             
         return
 
@@ -1085,6 +1034,53 @@ class MediaDisplayApp:
             print("[!] Resize blocked: recording is active and dynamic crop update is disabled")
 
         self._resize_restore_after_id = self.app.after_idle(restore_locked_size)
+
+    def start_trigger_listener(self):
+            #check if there is an older listener already running
+            if self.trigger_listener:
+                self.trigger_listener.stop()
+                self.trigger_listener = None
+
+            #create a new AdbTriggerListener object
+            self.trigger_listener = AdbTriggerListener(
+                device_serial=self.selected_device.serial, 
+                on_trigger=lambda message: self.app.after(
+                    0,
+                    lambda: self.handle_android_trigger(message)
+                )
+            )
+            #backgroung log watching 
+            self.trigger_listener.start()               
+    
+    def handle_android_trigger(self, message):
+        print(f"[+] Android trigger received: {message}")
+        self.info_label.configure(text=f"Android trigger received: {message}")
+        
+        if "AUDIO_LISTENER_EVENT type=MIC_OPEN" not in message:
+            return
+        
+        if "sources=VOICE_RECOGNITION" in message:
+            return
+
+        if not self.selected_audio_path:
+            self.info_label.configure(text="No audio file selected.")
+            return
+        
+        self.info_label.configure(text="Trigger received. Playing selected audio")
+        self.play_selected_audio()
+
+    def play_selected_audio(self):
+        self.audio_player.play(
+            self.selected_audio_path,
+            on_finished=self.handle_audio_finished
+        )
+
+    def handle_audio_finished(self):
+        self.app.after(
+            0,
+            lambda: self.info_label.configure(text="Audio playback finished")
+        )
+
 
 
 if __name__ == "__main__":
