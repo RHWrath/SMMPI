@@ -133,6 +133,21 @@ def get_ffprobe_path():
     print("[ERROR][FFPROBE] ffprobe.exe could not be resolved")
     return None
 
+def get_ffplay_path():
+    """Resolve ffplay from bundled locations first, then PATH."""
+    base_path = get_base_path()
+
+    candidates = [
+        os.path.join(base_path, "ffmpeg", "ffplay.exe"),
+        os.path.join(base_path, "_internal", "ffmpeg", "ffplay.exe"),
+        shutil.which("ffplay"),
+    ]
+
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+
+    return None
 
 def debug_log(message: str):
     try:

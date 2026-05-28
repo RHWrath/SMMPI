@@ -5,7 +5,8 @@ class FolderSelector:
     def __init__(self):
         self.media_extensions = {
             '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif',
-            '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.m4v'
+            '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.m4v',
+            '.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.opus', '.wma'
         }
     
     def get_media_files(self, folder_path):
