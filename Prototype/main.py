@@ -757,8 +757,8 @@ class MediaDisplayApp:
         """
         self.record_button.configure(
             text="⏺",
-            fg_color="#1f6aa5",
-            hover_color="#144870",
+            fg_color="#2fa572",
+            hover_color="#268a5f",
             state="normal"
         )
 
@@ -925,9 +925,9 @@ class MediaDisplayApp:
             )
             self.video_border_frame.configure(fg_color="black")
             
-            return
+        return
 
-        print("[+] Recording confirmed running after startup check")
+        
    
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
