@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import Canvas
 from about_software_manager import AboutSoftwareManager
+from lang import t
 
 
 def show_toast(parent, message, duration=2500, fg_color="#2fa572", text_color="white"):
@@ -53,7 +54,7 @@ class UISetup:
 
         select_button = ctk.CTkButton(
             control_frame,
-            text="Select Folder",
+            text=t("btn_select_folder"),
             corner_radius=32,
             command=on_folder_select_callback,
             font=("Arial", 14)
@@ -62,7 +63,7 @@ class UISetup:
 
         folder_path_label = ctk.CTkLabel(
             control_frame,
-            text="No folder selected",
+            text=t("no_folder_selected"),
             font=("Arial", 10),
             wraplength=300
         )
@@ -80,14 +81,14 @@ class UISetup:
 
         info_label = ctk.CTkLabel(
             middle_panel,
-            text="Select a folder to display images and videos",
+            text=t("select_folder_prompt"),
             font=("Arial", 10)
         )
         info_label.pack(pady=(10, 0))
 
         confirm_button = ctk.CTkButton(
             middle_panel,
-            text="Confirm Selection",
+            text=t("btn_confirm_selection"),
             corner_radius=32,
             command=on_image_confirm_callback,
             font=("Arial", 14)
@@ -98,8 +99,17 @@ class UISetup:
 
     @staticmethod
     def _attach_tooltip(widget, text):
-        """Show a small label tooltip on hover."""
+        """
+        Show a small label tooltip on hover.
+
+        `text` may be a plain string or a zero-arg callable returning a string.
+        Using a callable lets the tooltip reflect the active language even if
+        it changed after the widget was created.
+        """
         tip = None
+
+        def resolve_text():
+            return text() if callable(text) else text
 
         def on_enter(e):
             nonlocal tip
@@ -108,7 +118,7 @@ class UISetup:
             tip = ctk.CTkToplevel(widget)
             tip.wm_overrideredirect(True)
             tip.wm_geometry(f"+{x}+{y}")
-            ctk.CTkLabel(tip, text=text, font=("Arial", 11),
+            ctk.CTkLabel(tip, text=resolve_text(), font=("Arial", 11),
                          fg_color="#2b2b2b", corner_radius=6).pack(padx=8, pady=4)
 
         def on_leave(e):
@@ -130,10 +140,12 @@ class UISetup:
 
         title_label = ctk.CTkLabel(
             header_frame,
-            text="Device Screen",
+            text=t("device_screen"),
             font=("Arial", 14, "bold")
         )
         title_label.pack(side="left", pady=(10, 5))
+        # Exposed so the language re-apply can re-translate it after the picker.
+        right_panel.device_screen_title = title_label
 
         recording_timer_label = ctk.CTkLabel(
             header_frame,
@@ -154,7 +166,7 @@ class UISetup:
             hover_color="#268a5f",
         )
         record_button.pack(side="right", padx=(0, 8), pady=(10, 5))
-        UISetup._attach_tooltip(record_button, "Start Recording")
+        UISetup._attach_tooltip(record_button, lambda: t("tooltip_start_recording"))
 
         close_app_button = ctk.CTkButton(
             header_frame,
@@ -168,7 +180,7 @@ class UISetup:
             state="disabled",
         )
         close_app_button.pack(side="right", padx=(0, 4), pady=(10, 5))
-        UISetup._attach_tooltip(close_app_button, "Close Foreground App")
+        UISetup._attach_tooltip(close_app_button, lambda: t("tooltip_close_app"))
 
         video_container = ctk.CTkFrame(
             right_panel,
@@ -226,7 +238,7 @@ class UISetup:
 
         session_label = ctk.CTkLabel(
             topbar,
-            text="No active session",
+            text=t("no_active_session"),
             font=("Arial", 11),
             text_color="#4A9EFF"
         )
@@ -245,14 +257,14 @@ class UISetup:
 
         new_case_btn = ctk.CTkButton(
             sidebar,
-            text="New Case",
+            text=t("sidebar_new_case"),
             command=on_new_case
         )
         new_case_btn.pack(fill="x", padx=10, pady=(15, 5))
 
         open_case_btn = ctk.CTkButton(
             sidebar,
-            text="Switch Case",
+            text=t("sidebar_switch_case"),
             command=on_open_case
         )
         open_case_btn.pack(fill="x", padx=10, pady=5)
@@ -260,7 +272,7 @@ class UISetup:
         # Divider label for platform section
         platform_section_label = ctk.CTkLabel(
             sidebar,
-            text="PLATFORMS",
+            text=t("sidebar_platforms"),
             font=("Arial", 10),
             text_color="gray50"
         )
@@ -269,7 +281,7 @@ class UISetup:
 
         add_platform_btn = ctk.CTkButton(
             sidebar,
-            text="+ Add Platform",
+            text=t("sidebar_add_platform"),
             command=on_add_platform
         )
         add_platform_btn.pack(fill="x", padx=10, pady=(25, 5))
@@ -277,21 +289,20 @@ class UISetup:
 
         manage_platforms_btn = ctk.CTkButton(
             sidebar,
-            text="Manage Platforms",
+            text=t("sidebar_manage_platforms"),
             command=on_manage_platforms
         )
         manage_platforms_btn.pack(fill="x", padx=10, pady=5)
         # Hidden until login
 
-        #settings_btn = ctk.CTkButton(
+        # settings_btn = ctk.CTkButton(
         #    sidebar,
         #    text="Settings"
-        #)
-        #settings_btn.pack(fill="x", padx=10, pady=(25, 5))
+        # )
+        # settings_btn.pack(fill="x", padx=10, pady=(25, 5))
 
         return sidebar, new_case_btn, open_case_btn, platform_section_label, add_platform_btn, manage_platforms_btn
-    
-    
+
     @staticmethod
     def show_about_popup(parent):
         """
@@ -303,7 +314,7 @@ class UISetup:
         release_notes = AboutSoftwareManager.load_release_notes()
 
         popup = ctk.CTkToplevel(parent)
-        popup.title("About ADB Media Manager")
+        popup.title(t("about_window_title"))
         popup.geometry("620x520")
         popup.minsize(520, 420)
         popup.transient(parent)
@@ -327,7 +338,7 @@ class UISetup:
 
         version_label = ctk.CTkLabel(
             container,
-            text=f"Version: {version_info['version']}",
+            text=t("about_version", version=version_info["version"]),
             font=("Arial", 13),
             text_color="gray90"
         )
@@ -335,7 +346,7 @@ class UISetup:
 
         build_label = ctk.CTkLabel(
             container,
-            text=f"Build: {version_info['build']}",
+            text=t("about_build", build=version_info["build"]),
             font=("Arial", 12),
             text_color="gray65"
         )
@@ -350,10 +361,10 @@ class UISetup:
             justify="left"
         )
         description_label.pack(anchor="w", pady=(0, 14))
-        
+
         release_title = ctk.CTkLabel(
             container,
-            text="Release notes",
+            text=t("about_release_notes"),
             font=("Arial", 15, "bold")
         )
         release_title.pack(anchor="w", pady=(4, 6))
@@ -373,7 +384,7 @@ class UISetup:
 
         close_button = ctk.CTkButton(
             button_row,
-            text="Close",
+            text=t("btn_close"),
             width=120,
             command=popup.destroy
         )

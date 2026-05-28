@@ -1,13 +1,14 @@
 from customtkinter import filedialog
 import os
 
+
 class FolderSelector:
     def __init__(self):
         self.media_extensions = {
             '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif',
             '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.m4v'
         }
-    
+
     def get_media_files(self, folder_path):
         media_files = []
         if os.path.exists(folder_path):
@@ -17,18 +18,18 @@ class FolderSelector:
                     _, ext = os.path.splitext(file.lower())
                     if ext in self.media_extensions:
                         media_files.append(file_path)
-        
+
         return sorted(media_files)
-    
+
     def select_folder(self):
         print("Button clicked!")
         folder_path = filedialog.askdirectory(
-            title="Select a Folder Containing Images and Videos"
+            title=t("folder_dialog_title")
         )
         if not folder_path:
             print("No folder selected. Exiting.")
             return None, []
-        
+
         print(f"Selected folder: {folder_path}")
         media_files = self.get_media_files(folder_path)
         print(f"Found {len(media_files)} media files")

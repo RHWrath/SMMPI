@@ -3,6 +3,7 @@ import tempfile
 import os
 import sys
 from utils import get_ffmpeg_path, get_ffprobe_path
+from lang import t
 
 
 def get_video_duration(video_path):
@@ -113,15 +114,15 @@ def convert_video(video_path, output_video_path, platform_config, max_duration=6
 
 def on_video_confirm(app_instance):
     if not app_instance.current_selected_file:
-        app_instance.info_label.configure(text="No file selected")
+        app_instance.info_label.configure(text=t("no_file_selected"))
         return
 
     if not app_instance.selected_device:
-        app_instance.info_label.configure(text="No device connected")
+        app_instance.info_label.configure(text=t("no_device_connected"))
         return
 
     if not app_instance.active_platform:
-        app_instance.info_label.configure(text="No supported platform detected")
+        app_instance.info_label.configure(text=t("no_supported_platform_short"))
         return
 
     try:
@@ -135,7 +136,7 @@ def on_video_confirm(app_instance):
         duration = get_video_duration(app_instance.current_selected_file)
         if duration > max_duration:
             app_instance.info_label.configure(
-                text=f"Video too long ({duration:.1f}s). Max is {max_duration}s."
+                text=t("video_too_long", duration=duration, max=max_duration)
             )
             return
 
@@ -143,7 +144,7 @@ def on_video_confirm(app_instance):
         h = platform_config["height"]
 
         app_instance.info_label.configure(
-            text=f"Converting video ({duration:.1f}s) for {platform_name} ({w}x{h})..."
+            text=t("converting_video", duration=duration, platform=platform_name, width=w, height=h)
         )
         app_instance.app.update()
 
@@ -158,7 +159,7 @@ def on_video_confirm(app_instance):
         )
 
         if not success:
-            app_instance.info_label.configure(text="Failed to convert video")
+            app_instance.info_label.configure(text=t("failed_convert_video"))
             try:
                 os.unlink(temp_video_path)
             except:
@@ -167,7 +168,7 @@ def on_video_confirm(app_instance):
 
         remote_path = f"{remote_folder}virtual.mp4"
 
-        app_instance.info_label.configure(text="Pushing video to device...")
+        app_instance.info_label.configure(text=t("pushing_video"))
         app_instance.app.update()
 
         push_ok = push_file(app_instance.selected_device, temp_video_path, remote_path)
@@ -179,23 +180,20 @@ def on_video_confirm(app_instance):
 
         if not push_ok:
             app_instance.info_label.configure(
-                text=(
-                    "Failed to push video to device — check USB connection, device "
-                    "authorization, and that the target app has been opened at least once"
-                )
+                text=t("failed_push_video")
             )
             return
 
-        app_instance.info_label.configure(text=f"Restarting {platform_name}...")
+        app_instance.info_label.configure(text=t("restarting_platform", platform=platform_name))
         app_instance.app.update()
 
         from adb_utils import force_stop_and_relaunch
         force_stop_and_relaunch(app_instance.active_platform["package_name"])
 
         app_instance.info_label.configure(
-            text=f"Done — pushed virtual.mp4 to {platform_name} ({duration:.1f}s, {w}x{h})"
+            text=t("video_done", platform=platform_name, duration=duration, width=w, height=h)
         )
 
     except Exception as e:
-        app_instance.info_label.configure(text=f"Error: {str(e)}")
+        app_instance.info_label.configure(text=t("error_generic", error=str(e)))
         print(f"Error in on_video_confirm: {e}")

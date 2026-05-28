@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 
 from utils import get_ffmpeg_path
+from lang import t
 
 
 class ImageDisplay:
@@ -249,7 +250,7 @@ class ImageDisplay:
     def _create_video_placeholder(self, parent_frame, file_path, filename, on_click_callback):
         video_button = ctk.CTkButton(
             parent_frame,
-            text=f"Video File\n{filename[:15]}{'...' if len(filename) > 15 else ''}\n(Video)",
+            text=t("video_file_placeholder", name=f"{filename[:15]}{'...' if len(filename) > 15 else ''}"),
             font=("Arial", 10),
             command=lambda: on_click_callback(file_path) if on_click_callback else None,
             fg_color="#2B2B2B",
@@ -262,7 +263,7 @@ class ImageDisplay:
     def _create_error_placeholder(self, parent_frame, filename):
         error_button = ctk.CTkButton(
             parent_frame,
-            text=f"Error\n{filename[:15]}{'...' if len(filename) > 15 else ''}\n(Error)",
+            text=t("error_placeholder", name=f"{filename[:15]}{'...' if len(filename) > 15 else ''}"),
             font=("Arial", 10),
             fg_color="#4A4A4A",
             hover_color="#404040",
@@ -318,7 +319,7 @@ class ImageDisplay:
             except Exception as e:
                 error_widget = ctk.CTkLabel(
                     parent_panel,
-                    text=f"Error loading image:\n{str(e)}",
+                    text=t("error_loading_image", error=str(e)),
                     font=("Arial", 12)
                 )
                 error_widget.pack(expand=True)
@@ -377,7 +378,7 @@ class ImageDisplay:
             except Exception as e:
                 error_widget = ctk.CTkLabel(
                     parent_panel,
-                    text=f"Video File\n{os.path.basename(file_path)}\n\n(Thumbnail extraction failed)",
+                    text=t("video_thumb_failed", name=os.path.basename(file_path)),
                     font=("Arial", 12)
                 )
                 error_widget.pack(expand=True)

@@ -4,7 +4,7 @@ import re
 
 from config_manager import load_config, save_config
 from session import Session
-
+from lang import t
 
 # Matches Session's case_number allowlist so GUI input fails fast with a
 # helpful message instead of letting Session.__init__ raise deeper in the flow.
@@ -63,7 +63,7 @@ class CaseManager:
 
     def _show_login_screen(self):
         login_window = ctk.CTkToplevel(self.app)
-        login_window.title("Officer Login")
+        login_window.title(t("login_window_title"))
         login_window.geometry("400x250")
         login_window.resizable(False, False)
         login_window.transient(self.app)
@@ -76,7 +76,7 @@ class CaseManager:
 
         title_label = ctk.CTkLabel(
             login_window,
-            text="SMMPI - Officer Login",
+            text=t("login_heading"),
             font=("Arial", 20, "bold")
         )
         title_label.pack(pady=(30, 20))
@@ -86,14 +86,14 @@ class CaseManager:
 
         name_label = ctk.CTkLabel(
             name_frame,
-            text="Name:",
+            text=t("login_name_label"),
             font=("Arial", 14)
         )
         name_label.pack(anchor="w")
 
         name_entry = ctk.CTkEntry(
             name_frame,
-            placeholder_text="Enter your name",
+            placeholder_text=t("login_name_placeholder"),
             font=("Arial", 14),
             height=36
         )
@@ -111,7 +111,7 @@ class CaseManager:
         def on_continue():
             name = name_entry.get().strip()
             if not name:
-                error_label.configure(text="Please enter your name")
+                error_label.configure(text=t("login_error_no_name"))
                 return
             self._officer_name = name
             login_window.destroy()
@@ -128,7 +128,7 @@ class CaseManager:
 
         continue_button = ctk.CTkButton(
             button_frame,
-            text="Continue",
+            text=t("btn_continue"),
             command=on_continue,
             font=("Arial", 14),
             width=120
@@ -137,7 +137,7 @@ class CaseManager:
 
         cancel_button = ctk.CTkButton(
             button_frame,
-            text="Cancel",
+            text=t("btn_cancel"),
             command=on_cancel,
             font=("Arial", 14),
             width=120,
@@ -153,7 +153,7 @@ class CaseManager:
 
     def _show_case_selection_screen(self):
         case_window = ctk.CTkToplevel(self.app)
-        case_window.title("Select Case")
+        case_window.title(t("case_window_title"))
         case_window.geometry("550x500")
         case_window.resizable(False, False)
         case_window.transient(self.app)
@@ -170,14 +170,14 @@ class CaseManager:
 
         title_label = ctk.CTkLabel(
             header_frame,
-            text=f"Welcome, {self._officer_name}",
+            text=t("case_welcome", officer=self._officer_name),
             font=("Arial", 18, "bold")
         )
         title_label.pack(anchor="w")
 
         subtitle_label = ctk.CTkLabel(
             header_frame,
-            text="Select an existing case or create a new one",
+            text=t("case_subtitle"),
             font=("Arial", 12),
             text_color="gray60"
         )
@@ -189,7 +189,7 @@ class CaseManager:
 
         root_path_label = ctk.CTkLabel(
             root_frame,
-            text=f"Case folder: {self.config['case_root']}",
+            text=t("case_folder_label", path=self.config["case_root"]),
             font=("Arial", 10),
             text_color="gray50"
         )
@@ -198,25 +198,25 @@ class CaseManager:
         def change_root():
             from customtkinter import filedialog
             new_root = filedialog.askdirectory(
-                title="Select Case Root Folder",
+                title=t("case_root_dialog_title"),
                 initialdir=self.config["case_root"]
             )
             if new_root:
                 previous_root = self.config["case_root"]
                 self.config["case_root"] = new_root
                 if save_config(self.config):
-                    root_path_label.configure(text=f"Case folder: {new_root}")
+                    root_path_label.configure(text=t("case_folder_label", path=new_root))
                     refresh_case_list()
                 else:
                     # Roll back the in-memory value so we don't silently diverge from disk.
                     self.config["case_root"] = previous_root
                     error_label.configure(
-                        text="Could not save new case folder. Check folder permissions and try again."
+                        text=t("case_save_root_failed")
                     )
 
         change_root_button = ctk.CTkButton(
             root_frame,
-            text="Change",
+            text=t("btn_change"),
             command=change_root,
             font=("Arial", 11),
             width=70,
@@ -232,7 +232,7 @@ class CaseManager:
 
         new_case_entry = ctk.CTkEntry(
             new_case_frame,
-            placeholder_text="Enter new case number",
+            placeholder_text=t("case_new_placeholder"),
             font=("Arial", 13),
             height=34
         )
@@ -241,12 +241,12 @@ class CaseManager:
         def on_new_case():
             case_num = new_case_entry.get().strip()
             if not case_num:
-                error_label.configure(text="Please enter a case number")
+                error_label.configure(text=t("case_error_no_number"))
                 return
             # Allowlist check — matches Session's validation so construction won't fail.
             if not _VALID_CASE_NUMBER.match(case_num):
                 error_label.configure(
-                    text="Case number may only contain letters, digits, hyphens, underscores"
+                    text=t("case_error_invalid_chars")
                 )
                 return
             self._case_number = case_num
@@ -254,7 +254,7 @@ class CaseManager:
 
         new_case_button = ctk.CTkButton(
             new_case_frame,
-            text="New Case",
+            text=t("btn_new_case"),
             command=on_new_case,
             font=("Arial", 13),
             width=100,
@@ -267,7 +267,7 @@ class CaseManager:
         # ── Existing cases list ──
         list_label = ctk.CTkLabel(
             case_window,
-            text="Existing Cases",
+            text=t("case_existing_heading"),
             font=("Arial", 13, "bold")
         )
         list_label.pack(anchor="w", padx=20, pady=(0, 5))
@@ -295,7 +295,7 @@ class CaseManager:
             if not os.path.exists(case_root):
                 no_cases_label = ctk.CTkLabel(
                     case_list_frame,
-                    text="No cases found. Create a new case to get started.",
+                    text=t("case_none_found"),
                     font=("Arial", 12),
                     text_color="gray50"
                 )
@@ -315,7 +315,7 @@ class CaseManager:
             if not entries:
                 no_cases_label = ctk.CTkLabel(
                     case_list_frame,
-                    text="No cases found. Create a new case to get started.",
+                    text=t("case_none_found"),
                     font=("Arial", 12),
                     text_color="gray50"
                 )
@@ -339,7 +339,7 @@ class CaseManager:
 
                 case_button = ctk.CTkButton(
                     case_list_frame,
-                    text=f"  {case_name}\n  {file_count} file(s)",
+                    text=t("case_file_count", name=case_name, count=file_count),
                     font=("Arial", 13),
                     anchor="w",
                     height=50,
@@ -364,7 +364,7 @@ class CaseManager:
 
         cancel_button = ctk.CTkButton(
             bottom_frame,
-            text="Cancel",
+            text=t("btn_cancel"),
             command=on_cancel,
             font=("Arial", 13),
             width=100,
@@ -377,7 +377,7 @@ class CaseManager:
 
         refresh_case_list()
         case_window.wait_window()
-        
+
     def select_case_for_current_officer(self, officer_name: str):
         """
         Re-open only the case selection screen for an already known officer.

@@ -5,6 +5,7 @@ import sys
 from PIL import Image
 from utils import get_ffmpeg_path
 from ui_setup import show_toast
+from lang import t
 
 def resize_image_to_phone_camera(image_path, output_path, target_width=1080, target_height=1920, rotate=None,
                                  mirror=None, resize_mode="fill"):
@@ -213,7 +214,7 @@ def push_image_to_gallery(app_instance, platform_config):
     resize_mode = photo_config.get("resize_mode", "fill")
     filename = photo_config.get("filename", "virtual_photo.jpg")
 
-    app_instance.info_label.configure(text=f"Resizing image ({resize_mode})...")
+    app_instance.info_label.configure(text=t("resizing_image", mode=resize_mode))
     app_instance.app.update()
 
     # Create temp file for resized image
@@ -231,7 +232,7 @@ def push_image_to_gallery(app_instance, platform_config):
     )
 
     if not success:
-        app_instance.info_label.configure(text="Failed to resize image")
+        app_instance.info_label.configure(text=t("failed_resize_image"))
         try:
             os.unlink(temp_image_path)
         except:
@@ -240,7 +241,7 @@ def push_image_to_gallery(app_instance, platform_config):
 
     remote_path = f"{gallery_path}{filename}"
 
-    app_instance.info_label.configure(text="Pushing image to device gallery...")
+    app_instance.info_label.configure(text=t("pushing_image_gallery"))
     app_instance.app.update()
 
     push_ok = push_file(app_instance.selected_device, temp_image_path, remote_path)
@@ -252,7 +253,7 @@ def push_image_to_gallery(app_instance, platform_config):
 
     if not push_ok:
         app_instance.info_label.configure(
-            text="Failed to push image to device — check USB connection and device authorization"
+            text=t("failed_push_image")
         )
         return
 
@@ -264,9 +265,9 @@ def push_image_to_gallery(app_instance, platform_config):
     platform_name = platform_config["name"]
 
     app_instance.info_label.configure(
-        text=f"Image pushed to gallery. Use {platform_name} attach > Gallery to send it."
+        text=t("image_pushed_gallery", platform=platform_name)
     )
-    show_toast(app_instance.app, "Image sent successfully")
+    show_toast(app_instance.app, t("image_sent_success"))
 
 
 
@@ -288,7 +289,7 @@ def push_image_as_video(app_instance, platform_config):
     filename = video_config.get("filename", "virtual.mp4")
 
     app_instance.info_label.configure(
-        text=f"Converting image to video ({width}x{height})..."
+        text=t("converting_image_video", width=width, height=height)
     )
     app_instance.app.update()
 
@@ -307,7 +308,7 @@ def push_image_as_video(app_instance, platform_config):
     )
 
     if not success:
-        app_instance.info_label.configure(text="Failed to convert image to video")
+        app_instance.info_label.configure(text=t("failed_convert_image_video"))
         try:
             os.unlink(temp_video_path)
         except:
@@ -316,7 +317,7 @@ def push_image_as_video(app_instance, platform_config):
 
     remote_path = f"{remote_folder}{filename}"
 
-    app_instance.info_label.configure(text="Pushing video to device...")
+    app_instance.info_label.configure(text=t("pushing_video"))
     app_instance.app.update()
 
     push_ok = push_file(app_instance.selected_device, temp_video_path, remote_path)
@@ -328,10 +329,7 @@ def push_image_as_video(app_instance, platform_config):
 
     if not push_ok:
         app_instance.info_label.configure(
-            text=(
-                "Failed to push video to device — check USB connection, device "
-                "authorization, and that the target app has been opened at least once"
-            )
+            text=t("failed_push_video")
         )
         return
 
@@ -340,9 +338,9 @@ def push_image_as_video(app_instance, platform_config):
     force_stop_and_relaunch(package_name)
 
     app_instance.info_label.configure(
-        text=f"Successfully pushed {filename} ({width}x{height}) to device"
+        text=t("video_pushed", filename=filename, width=width, height=height)
     )
-    show_toast(app_instance.app, "Image sent successfully")
+    show_toast(app_instance.app, t("image_sent_success"))
 
 
 def on_image_confirm(app_instance):
@@ -351,11 +349,11 @@ def on_image_confirm(app_instance):
     and routes to either gallery push or VCAM video conversion.
     """
     if not app_instance.current_selected_file:
-        app_instance.info_label.configure(text="No file selected")
+        app_instance.info_label.configure(text=t("no_file_selected"))
         return
 
     if not app_instance.selected_device:
-        app_instance.info_label.configure(text="No device connected")
+        app_instance.info_label.configure(text=t("no_device_connected"))
         return
 
     try:
@@ -364,7 +362,7 @@ def on_image_confirm(app_instance):
         platform_config = get_active_platform()
 
         if platform_config is None:
-            app_instance.info_label.configure(text="No supported platform detected in foreground")
+            app_instance.info_label.configure(text=t("no_platform_foreground_detected"))
             return
 
         photo_mode = platform_config.get("photo_mode", "vcam")
@@ -378,7 +376,7 @@ def on_image_confirm(app_instance):
             push_image_as_video(app_instance, platform_config)
 
     except Exception as e:
-        app_instance.info_label.configure(text=f"Error: {str(e)}")
+        app_instance.info_label.configure(text=t("error_generic", error=str(e)))
         print(f"[ERROR] on_image_confirm: {e}")
         import traceback
         traceback.print_exc()
