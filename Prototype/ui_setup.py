@@ -150,8 +150,8 @@ class UISetup:
             height=36,
             corner_radius=18,
             font=("Arial", 16),
-            fg_color="#1f6aa5",
-            hover_color="#144870",
+            fg_color="#2fa572",
+            hover_color="#268a5f",
         )
         record_button.pack(side="right", padx=(0, 8), pady=(10, 5))
         UISetup._attach_tooltip(record_button, "Start Recording")
@@ -163,8 +163,8 @@ class UISetup:
             height=36,
             corner_radius=18,
             font=("Arial", 16),
-            fg_color="#d94040",
-            hover_color="#b33030",
+            fg_color="#1f6aa5",
+            hover_color="#144870",
             state="disabled",
         )
         close_app_button.pack(side="right", padx=(0, 4), pady=(10, 5))

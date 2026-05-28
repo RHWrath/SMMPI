@@ -744,8 +744,8 @@ class MediaDisplayApp:
         """
         self.record_button.configure(
             text="⏺",
-            fg_color="#1f6aa5",
-            hover_color="#144870",
+            fg_color="#2fa572",
+            hover_color="#268a5f",
             state="normal"
         )
 
