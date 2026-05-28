@@ -22,13 +22,15 @@ from about_software_manager import AboutSoftwareManager
 from adb_trigger_listener import AdbTriggerListener
 from audio import on_audio_confirm
 from audio_player import AudioPlayer
+import lang
+from lang import t, show_language_picker
 
 
 class MediaDisplayApp:
     def __init__(self):
         self.app = ctk.CTk()
         ctk.set_appearance_mode("dark")
-        self.app.title("ADB Media Manager")
+        self.app.title(t("app_window_title"))
 
         start_adb_server()
 
@@ -89,7 +91,7 @@ class MediaDisplayApp:
         
         self.about_button = ctk.CTkButton(
             self.sidebar,
-            text="About",
+            text=t("btn_about"),
             command=lambda: UISetup.show_about_popup(self.app)
         )
         self.about_button.pack(side="bottom", fill="x", padx=12, pady=(8, 54))
@@ -118,7 +120,45 @@ class MediaDisplayApp:
         self.app.bind("<Configure>", self._on_window_configure)
         
         self.app.state("zoomed")
-        
+
+    def _apply_language_to_ui(self):
+        """
+        Re-apply the active language to the static widgets that setup_ui()
+        built in __init__ (before the language picker ran). Only static
+        chrome is handled here; dynamic status text is set in the active
+        language at the point it's written. Each widget is guarded so a
+        layout change elsewhere can't make this crash the startup flow.
+        """
+        widget_keys = [
+            (getattr(self, "select_button", None), "btn_select_folder"),
+            (getattr(self, "folder_path_label", None), "no_folder_selected"),
+            (getattr(self, "info_label", None), "select_folder_prompt"),
+            (getattr(self, "new_case_btn", None), "sidebar_new_case"),
+            (getattr(self, "open_case_btn", None), "sidebar_switch_case"),
+            (getattr(self, "sidebar_platform_label", None), "sidebar_platforms"),
+            (getattr(self, "sidebar_add_platform_btn", None), "sidebar_add_platform"),
+            (getattr(self, "sidebar_manage_platforms_btn", None), "sidebar_manage_platforms"),
+            (getattr(self, "about_button", None), "btn_about"),
+        ]
+        for widget, key in widget_keys:
+            if widget is not None:
+                try:
+                    widget.configure(text=t(key))
+                except Exception as e:
+                    print(f"[WARN] Could not re-apply language to {key}: {e}")
+
+        # Right-panel title (stored on the right_panel frame by ui_setup).
+        right_panel = getattr(self, "right_panel", None)
+        title = getattr(right_panel, "device_screen_title", None) if right_panel else None
+        if title is not None:
+            try:
+                title.configure(text=t("device_screen"))
+            except Exception as e:
+                print(f"[WARN] Could not re-apply language to device_screen title: {e}")
+
+        # Toolbar session label reflects the (still empty) session state.
+        self.update_toolbar_session_label()
+
     def maximize_windowed_fullscreen(self):
         self.app.deiconify()
         self.app.update_idletasks()
@@ -133,12 +173,14 @@ class MediaDisplayApp:
                 print(f"[WARN] Win32 maximize failed: {e}")
 
     def on_new_case(self):
-        self.change_case(success_message="New case selected")
+        self.change_case(success_message=t("new_case_selected"))
 
     def on_open_case(self):
-        self.change_case(success_message="Case changed")
+        self.change_case(success_message=t("case_changed"))
 
-    def change_case(self, success_message="Case changed"):
+    def change_case(self, success_message=None):
+        if success_message is None:
+            success_message = t("case_changed")
         if not self.session:
             print("[!] Cannot change case: no active session")
             return
@@ -146,7 +188,7 @@ class MediaDisplayApp:
         if self.recording_manager.is_recording():
             show_toast(
                 self.app,
-                "Stop the recording before changing case",
+                t("toast_stop_recording_first"),
                 fg_color="#d94040",
                 duration=3500
             )
@@ -168,12 +210,12 @@ class MediaDisplayApp:
         self.update_toolbar_session_label()
 
         self.app.title(
-            f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}"
+            t("app_window_title_session", officer=self.session.officer_name, case=self.session.case_number)
         )
 
         if hasattr(self, "session_status_label") and self.session_status_label.winfo_exists():
             self.session_status_label.configure(
-                text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
+                text=t("session_label", officer=self.session.officer_name, case=self.session.case_number)
             )
 
         if self.sidebar_visible:
@@ -181,7 +223,7 @@ class MediaDisplayApp:
 
         show_toast(
             self.app,
-            f"{success_message}: {self.session.case_number}",
+            t("toast_case_changed", message=success_message, case=self.session.case_number),
             fg_color="#4A9EFF"
         )
 
@@ -203,22 +245,22 @@ class MediaDisplayApp:
 
         if self.session:
             self.session_toolbar_label.configure(
-                text=f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}",
+                text=t("session_label", officer=self.session.officer_name, case=self.session.case_number),
                 text_color="#4A9EFF"
             )
         else:
             self.session_toolbar_label.configure(
-                text="No active session",
+                text=t("no_active_session"),
                 text_color="gray70"
             )
 
     def start_stream(self):
         if not self.selected_device:
-            self.info_label.configure(text="No device connected")
+            self.info_label.configure(text=t("no_device_connected"))
             print("[!] Cannot start stream: No device selected")
             return
         if self.stream:
-            self.info_label.configure(text="Stream already running")
+            self.info_label.configure(text=t("stream_already_running"))
             print("[!] Stream already running")
             return
 
@@ -235,9 +277,9 @@ class MediaDisplayApp:
             self.stream.start()
             print("[+] Stream started in canvas")
 
-            self.info_label.configure(text="Streaming started")
+            self.info_label.configure(text=t("streaming_started"))
         except Exception as e:
-            self.info_label.configure(text=f"Error: {str(e)}")
+            self.info_label.configure(text=t("error_generic", error=str(e)))
             print(f"Error starting stream: {e}")
             import traceback
             traceback.print_exc()
@@ -247,9 +289,9 @@ class MediaDisplayApp:
             try:
                 model = self.selected_device.shell("getprop ro.product.model").strip()
                 manufacturer = self.selected_device.shell("getprop ro.product.manufacturer").strip()
-                device_info = f"Connected: {manufacturer} {model}"
+                device_info = t("connected_device", manufacturer=manufacturer, model=model)
             except Exception:
-                device_info = f"Connected: {self.selected_device.serial}"
+                device_info = t("connected_serial", serial=self.selected_device.serial)
         else:
             device_info = ""
 
@@ -271,7 +313,7 @@ class MediaDisplayApp:
         """Kept as a no-op — session info is shown in the topbar only."""
         if not self.session:
             return
-        session_text = f"Officer: {self.session.officer_name}  |  Case: {self.session.case_number}"
+        session_text = t("session_label", officer=self.session.officer_name, case=self.session.case_number)
         self.session_status_label = ctk.CTkLabel(
             self.right_panel,
             text=session_text,
@@ -283,14 +325,14 @@ class MediaDisplayApp:
     def _open_add_platform_wizard(self):
         """Open the Add Platform wizard. Gated by an active session."""
         if not self.session or not self.session.officer_name:
-            show_toast(self.app, "Login required to add platforms", fg_color="#d94040")
+            show_toast(self.app, t("login_required_add"), fg_color="#d94040")
             return
         PlatformWizard(self.app, on_saved=self._on_platform_saved)
 
     def _open_manage_platforms(self):
         """Open the Manage Platforms editor. Gated by an active session."""
         if not self.session or not self.session.officer_name:
-            show_toast(self.app, "Login required to manage platforms", fg_color="#d94040")
+            show_toast(self.app, t("login_required_manage"), fg_color="#d94040")
             return
         PlatformEditor.open(self.app, on_saved=self._on_platform_saved)
 
@@ -345,12 +387,12 @@ class MediaDisplayApp:
 
         # Update UI
         self.device_status_label.configure(
-            text="Device disconnected",
+            text=t("device_disconnected"),
             text_color="red"
         )
-        self.right_status_label.configure(text="Stream stopped - device disconnected")
+        self.right_status_label.configure(text=t("stream_stopped_disconnected"))
 
-        show_toast(self.app, "Device disconnected - reconnect to continue", fg_color="#d94040", duration=3000)
+        show_toast(self.app, t("toast_device_disconnected"), fg_color="#d94040", duration=3000)
 
         # Small delay so the toast is visible before the device window pops up
         self.app.after(1500, self._show_reconnect_dialog)
@@ -379,7 +421,7 @@ class MediaDisplayApp:
                 return detected_platform
 
             self.info_label.configure(
-                text=f"Detecting platform... (attempt {attempt}/{attempts})"
+                text=t("detecting_platform_attempt", attempt=attempt, attempts=attempts)
             )
             self.app.update()
             time.sleep(delay)
@@ -390,19 +432,19 @@ class MediaDisplayApp:
         folder_path, self.media_files = self.folder_selector.select_folder()
         if folder_path and self.media_files:
             self.selected_folder_path = folder_path
-            self.folder_path_label.configure(text=f"Path: {folder_path}")
+            self.folder_path_label.configure(text=t("path_label", path=folder_path))
             self.image_display.display_media_files(self.media_files, self.on_file_click)
-            self.info_label.configure(text=f"Found {len(self.media_files)} media files")
+            self.info_label.configure(text=t("found_media", count=len(self.media_files)))
         elif folder_path:
             self.selected_folder_path = folder_path
-            self.folder_path_label.configure(text=f"Path: {folder_path}")
-            self.info_label.configure(text="No media files found in selected folder")
+            self.folder_path_label.configure(text=t("path_label", path=folder_path))
+            self.info_label.configure(text=t("no_media_in_folder"))
         else:
-            self.info_label.configure(text="No folder selected")
+            self.info_label.configure(text=t("no_folder_selected"))
 
     def on_file_click(self, file_path):
         filename = os.path.basename(file_path)
-        self.info_label.configure(text=f"Selected: {filename}")
+        self.info_label.configure(text=t("selected_file", filename=filename))
         self.current_selected_file = file_path
         self.current_image_display = self.image_display.display_single_image(
             self.middle_panel,
@@ -415,20 +457,20 @@ class MediaDisplayApp:
         Handle media file confirmation - detects file type and processes accordingly.
         """
         if not self.current_selected_file:
-            self.info_label.configure(text="No file selected")
+            self.info_label.configure(text=t("no_file_selected"))
             return
 
         self.info_label.configure(
-            text="Detecting active platform..."
+            text=t("detecting_active_platform")
         )
         self.app.update()
 
         # Detect which platform is in the foreground
         platform = self.detect_active_platform_with_retry()
-    
+        self.update_platform_status(platform)
 
         if platform is None:
-            self.info_label.configure(text="No supported platform detected.")
+            self.info_label.configure(text=t("no_supported_platform"))
             self._show_unknown_platform_popup()
             return
 
@@ -454,11 +496,11 @@ class MediaDisplayApp:
             print(f"Arming audio file: {self.current_selected_file}")
             on_audio_confirm(self)
         else:
-            self.info_label.configure(text=f"Unsupported file type: {ext}")
+            self.info_label.configure(text=t("unsupported_file_type", ext=ext))
 
     def _show_unknown_platform_popup(self):
         popup = ctk.CTkToplevel(self.app)
-        popup.title("Platform Not Recognised")
+        popup.title(t("unknown_platform_title"))
         popup.geometry("400x180")
         popup.transient(self.app)
         popup.grab_set()
@@ -469,19 +511,19 @@ class MediaDisplayApp:
 
         ctk.CTkLabel(
             popup,
-            text="No supported platform detected.",
+            text=t("unknown_platform_heading"),
             font=("Arial", 14, "bold")
         ).pack(pady=(20, 5))
 
         ctk.CTkLabel(
             popup,
-            text="Open Snapchat or WhatsApp on the phone,\nmake sure it is in the foreground,\nthen try again.",
+            text=t("unknown_platform_body"),
             font=("Arial", 12)
         ).pack(pady=(0, 20))
 
         ctk.CTkButton(
             popup,
-            text="OK",
+            text=t("btn_ok"),
             width=100,
             command=popup.destroy
         ).pack()
@@ -495,7 +537,7 @@ class MediaDisplayApp:
             "force_close"    - close immediately, recording will likely be lost
         """
         popup = ctk.CTkToplevel(self.app)
-        popup.title("Recording in progress")
+        popup.title(t("close_recording_title"))
         popup.geometry("460x260")
         popup.resizable(False, False)
         popup.transient(self.app)
@@ -510,17 +552,14 @@ class MediaDisplayApp:
 
         ctk.CTkLabel(
             popup,
-            text="⚠  A recording is still running",
+            text=t("close_recording_heading"),
             font=("Arial", 15, "bold"),
             text_color="#d94040"
         ).pack(pady=(20, 6))
 
         ctk.CTkLabel(
             popup,
-            text=(
-                "Closing the app now can corrupt the video file.\n"
-                "Stop the recording first so it can be saved properly."
-            ),
+            text=t("close_recording_body"),
             font=("Arial", 12),
             justify="center"
         ).pack(pady=(0, 18))
@@ -534,7 +573,7 @@ class MediaDisplayApp:
 
         ctk.CTkButton(
             button_row,
-            text="Stop recording & close",
+            text=t("btn_stop_and_close"),
             width=170,
             fg_color="#2f7d32",
             hover_color="#256528",
@@ -543,14 +582,14 @@ class MediaDisplayApp:
 
         ctk.CTkButton(
             button_row,
-            text="Keep recording",
+            text=t("btn_keep_recording"),
             width=130,
             command=lambda: pick("cancel")
         ).pack(side="left", padx=6)
 
         ctk.CTkButton(
             popup,
-            text="Force close (video will be lost)",
+            text=t("btn_force_close"),
             width=240,
             fg_color="#5a1f1f",
             hover_color="#4a1818",
@@ -573,7 +612,7 @@ class MediaDisplayApp:
     def close_foreground_app(self):
         """Detect the foreground app on the device and force stop it."""
         if not self.selected_device:
-            self.info_label.configure(text="No device connected")
+            self.info_label.configure(text=t("no_device_connected"))
             return
 
         try:
@@ -582,18 +621,18 @@ class MediaDisplayApp:
             platform_config = get_active_platform()
 
             if platform_config is None:
-                show_toast(self.app, "No supported platform in foreground", fg_color="#d94040")
+                show_toast(self.app, t("no_platform_foreground"), fg_color="#d94040")
                 return
 
             package_name = platform_config["package_name"]
             platform_name = platform_config["name"]
 
             force_stop(package_name)
-            show_toast(self.app, f"{platform_name} closed")
+            show_toast(self.app, t("platform_closed", platform=platform_name))
             print(f"[+] Closed {platform_name} ({package_name})")
 
         except Exception as e:
-            show_toast(self.app, f"Failed to close app", fg_color="#d94040")
+            show_toast(self.app, t("failed_close_app"), fg_color="#d94040")
             print(f"[ERROR] close_foreground_app: {e}")
 
     def run(self):
@@ -621,7 +660,7 @@ class MediaDisplayApp:
             if self.recording_manager.is_stopping():
                 show_toast(
                     self.app,
-                    "Recording is still saving. Please wait.",
+                    t("recording_still_saving"),
                     fg_color="#d94040",
                     duration=3000
                 )
@@ -639,7 +678,7 @@ class MediaDisplayApp:
                     print("[+] Stopping recording before close...")
 
                     self.record_button.configure(state="disabled")
-                    self.info_label.configure(text="Stopping recording before closing...")
+                    self.info_label.configure(text=t("stopping_before_close"))
 
                     def close_after_save(final_file_path):
                         def update_ui_and_close():
@@ -666,7 +705,7 @@ class MediaDisplayApp:
 
                             show_toast(
                                 self.app,
-                                "Recording stop failed - check the case folder for the .mkv temp file",
+                                t("recording_stop_failed_toast"),
                                 fg_color="#d94040",
                                 duration=5000
                             )
@@ -674,7 +713,7 @@ class MediaDisplayApp:
                             # Do not destroy immediately after a failed save.
                             # Safer default: keep the app open so the user can inspect the issue.
                             self.info_label.configure(
-                                text="Recording stop failed - app kept open for safety"
+                                text=t("recording_stop_failed_kept_open")
                             )
 
                         self.app.after(0, update_ui_after_error)
@@ -696,6 +735,13 @@ class MediaDisplayApp:
         self.app.protocol("WM_DELETE_WINDOW", on_close)
 
         def startup_flow():
+            # Step 0: Language selection — must run before any other UI is
+            # shown. setup_ui() already built the main panels in the default
+            # language during __init__, so we re-apply the chosen language to
+            # those existing widgets right after the picker resolves.
+            show_language_picker(self.app)
+            self._apply_language_to_ui()
+
             # Step 1: Login + case selection
             case_manager = CaseManager(self.app)
             self.session = case_manager.run_login_flow()
@@ -711,7 +757,9 @@ class MediaDisplayApp:
 
             # Update window title with session info
             self.app.title(
-                f"ADB Media Manager — {self.session.officer_name} — Case {self.session.case_number}"
+                t("app_window_title_session",
+                  officer=self.session.officer_name,
+                  case=self.session.case_number)
             )
 
             # Optional recovery check for unfinished temp recordings
@@ -723,7 +771,7 @@ class MediaDisplayApp:
                 if recovered_files:
                     show_toast(
                         self.app,
-                        f"Recovered {len(recovered_files)} unfinished recording(s)",
+                        t("recovered_recordings", count=len(recovered_files)),
                         fg_color="#2f7d32",
                         duration=4000
                     )
@@ -789,12 +837,13 @@ class MediaDisplayApp:
         This method is called from the worker thread, so UI updates are forwarded
         to the Tkinter main thread using app.after().
         """
+
         def update_ui():
             self._reset_recording_ui_after_stop()
-            self.info_label.configure(text="Recording saved")
+            self.info_label.configure(text=t("recording_saved"))
             show_toast(
                 self.app,
-                "Recording saved successfully",
+                t("recording_saved_success"),
                 fg_color="#2f7d32",
                 duration=3000
             )
@@ -809,16 +858,17 @@ class MediaDisplayApp:
         This method is called from the worker thread, so UI updates are forwarded
         to the Tkinter main thread using app.after().
         """
+
         def update_ui():
             self._reset_recording_ui_after_stop()
 
             self.info_label.configure(
-                text="Recording stop failed - check temp MKV file"
+                text=t("recording_stop_failed_label")
             )
 
             show_toast(
                 self.app,
-                "Recording stop failed - check the case folder for the .mkv temp file",
+                t("recording_stop_failed_toast"),
                 fg_color="#d94040",
                 duration=5000
             )
@@ -833,11 +883,11 @@ class MediaDisplayApp:
             # Stop Recording Logic
             if self.recording_manager.is_recording():
                 if self.recording_manager.is_stopping():
-                    self.info_label.configure(text="Recording is already stopping...")
+                    self.info_label.configure(text=t("recording_already_stopping"))
                     return
 
                 self.record_button.configure(state="disabled")
-                self.info_label.configure(text="Stopping recording...")
+                self.info_label.configure(text=t("stopping_recording"))
 
                 self.recording_manager.stop_recording_async(
                     on_success=self._on_recording_saved,
@@ -847,11 +897,11 @@ class MediaDisplayApp:
                 return
 
             if self.recording_manager.is_stopping():
-                self.info_label.configure(text="Recording is still saving...")
+                self.info_label.configure(text=t("recording_still_saving_short"))
                 return
 
             if not self.session:
-                self.info_label.configure(text="No active case session.")
+                self.info_label.configure(text=t("no_active_case_session"))
                 return
 
             x, y, w, h = self.get_widget_relative_geometry(self.video_canvas)
@@ -895,7 +945,7 @@ class MediaDisplayApp:
                 state="normal"
             )
 
-            self.info_label.configure(text="Recording started")
+            self.info_label.configure(text=t("recording_started"))
 
             # Add red border to video canvas to indicate recording
             self.video_border_frame.configure(fg_color="red")
@@ -907,16 +957,15 @@ class MediaDisplayApp:
 
         except Exception as e:
             self.record_button.configure(state="normal")
-            self.info_label.configure(text=f"Recording error: {str(e)}")
-            print(f"[ERROR] toggle_recording: {e}")        
-        
-        
+            self.info_label.configure(text=t("recording_error", error=str(e)))
+            print(f"[ERROR] toggle_recording: {e}")
+
     def _check_recording_started(self):
         if not self.recording_manager.current_session:
             return
 
         if not self.recording_manager.is_recording():
-            self.info_label.configure(text="Recording failed to start")
+            self.info_label.configure(text=t("recording_failed_start"))
             self.record_button.configure(
                 text="⏺",
                 fg_color="#1f6aa5",
@@ -924,11 +973,11 @@ class MediaDisplayApp:
                 state="normal"
             )
             self.video_border_frame.configure(fg_color="black")
-            
-        return
 
-        
-   
+            return
+
+        print("[+] Recording confirmed running after startup check")
+
     def _update_recording_timer(self):
         if not self.recording_manager.is_recording():
             print(f"[DEBUG] Not updating timer - recording not active {self.recording_manager.is_recording()}")
@@ -946,7 +995,7 @@ class MediaDisplayApp:
         )
 
         self._recording_timer_after_id = self.app.after(1000, self._update_recording_timer)
-        
+
     def _on_window_configure(self, event):
         """
         Soft-lock window resizing while recording.
@@ -983,13 +1032,13 @@ class MediaDisplayApp:
         current_y = self.app.winfo_y()
 
         size_changed = (
-            current_width != locked_width
-            or current_height != locked_height
+                current_width != locked_width
+                or current_height != locked_height
         )
 
         position_changed = (
-            current_x != locked_x
-            or current_y != locked_y
+                current_x != locked_x
+                or current_y != locked_y
         )
 
         # Only block actual resize, not normal internal layout/configure events.
@@ -1021,7 +1070,7 @@ class MediaDisplayApp:
 
                 show_toast(
                     self.app,
-                    "Window resizing is disabled while recording",
+                    t("window_resize_disabled"),
                     fg_color="#d94040",
                     duration=3000
                 )

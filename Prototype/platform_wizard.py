@@ -11,6 +11,7 @@ import customtkinter as ctk
 from utils import get_platforms_file
 from platform_management import get_foreground_package, load_platforms
 from ui_setup import show_toast
+from lang import t
 
 
 # ---- Defaults & constants -------------------------------------------------
@@ -57,11 +58,20 @@ class _PlatformFormBase:
     config to platforms.json.
     """
 
-    # Subclasses override
-    WINDOW_TITLE = "Platform"
-    SAVE_BUTTON_LABEL = "Save"
-    HEADER_TITLE = "Platform"
-    HEADER_SUBTITLE = ""
+    # Subclasses override these key methods. They return translation KEYS
+    # resolved via t() at build time (not import time), so the language
+    # picked at launch is respected.
+    def _window_title_key(self):
+        return "wiz_default_window_title"
+
+    def _save_button_key(self):
+        return "wiz_default_save"
+
+    def _header_title_key(self):
+        return "wiz_default_header"
+
+    def _header_subtitle_key(self):
+        return None
 
     def __init__(self, parent, on_saved=None):
         self.parent = parent
@@ -73,7 +83,7 @@ class _PlatformFormBase:
         self._edit_index = None
 
         self.win = ctk.CTkToplevel(parent)
-        self.win.title(self.WINDOW_TITLE)
+        self.win.title(t(self._window_title_key()))
         self.win.geometry("640x820")
         self.win.transient(parent)
         self.win.grab_set()
@@ -96,14 +106,15 @@ class _PlatformFormBase:
 
         ctk.CTkLabel(
             scroll,
-            text=self.HEADER_TITLE,
+            text=t(self._header_title_key()),
             font=("Arial", 18, "bold"),
         ).pack(pady=(5, 2))
 
-        if self.HEADER_SUBTITLE:
+        subtitle_key = self._header_subtitle_key()
+        if subtitle_key:
             ctk.CTkLabel(
                 scroll,
-                text=self.HEADER_SUBTITLE,
+                text=t(subtitle_key),
                 font=("Arial", 11),
                 text_color="gray",
             ).pack(pady=(0, 12))
@@ -112,10 +123,10 @@ class _PlatformFormBase:
         self._build_pre_form(scroll)
 
         # Platform identity ------------------------------------------------
-        self._section_label(scroll, "Platform identity")
+        self._section_label(scroll, t("wiz_section_identity"))
 
         self.name_entry = self._labeled_entry(
-            scroll, "Platform name (e.g. Instagram)"
+            scroll, t("wiz_name_label")
         )
 
         # Package row with Detect button
@@ -123,7 +134,7 @@ class _PlatformFormBase:
         package_block.pack(fill="x", padx=4, pady=(0, 6))
         ctk.CTkLabel(
             package_block,
-            text="Package name (e.g. com.instagram.android)",
+            text=t("wiz_package_label"),
             font=("Arial", 11),
         ).pack(anchor="w")
 
@@ -133,14 +144,14 @@ class _PlatformFormBase:
         self.package_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         ctk.CTkButton(
             entry_row,
-            text="Detect from phone",
+text=t("wiz_btn_detect"),
             width=140,
             command=self._detect_package,
         ).pack(side="right")
 
         ctk.CTkLabel(
             package_block,
-            text="Open the target app on the phone and bring it to the foreground, then click Detect.",
+            text=t("wiz_detect_hint"),
             font=("Arial", 9),
             text_color="gray",
             wraplength=600,
@@ -148,15 +159,11 @@ class _PlatformFormBase:
         ).pack(anchor="w", pady=(2, 0))
 
         # Photo mode -------------------------------------------------------
-        self._section_label(scroll, "Photo delivery method")
+        self._section_label(scroll, t("wiz_section_photo_method"))
 
         ctk.CTkLabel(
             scroll,
-            text=(
-                "gallery — push photo to phone gallery (works for apps with "
-                "hardened cameras like WhatsApp/Discord)\n"
-                "vcam — feed photo through the virtual camera (Snapchat-style)"
-            ),
+            text=t("wiz_photo_method_hint"),
             font=("Arial", 10),
             text_color="gray",
             justify="left",
@@ -178,21 +185,21 @@ class _PlatformFormBase:
         # Path fields (one is shown depending on photo_mode)
         self.gallery_path_entry = self._labeled_entry(
             scroll,
-            "Gallery path on phone",
+            t("wiz_gallery_path_label"),
             default=DEFAULT_GALLERY_PATH,
         )
         self.remote_folder_entry = self._labeled_entry(
             scroll,
-            "Remote folder (the folder VCAM watches on the phone)",
+            t("wiz_remote_folder_label"),
             default= ""
         )
 
         # Photo specs ------------------------------------------------------
-        self._section_label(scroll, "Photo specs")
+        self._section_label(scroll, t("wiz_section_photo_specs"))
         self.photo_widgets = self._spec_block(scroll, DEFAULT_PHOTO_SPECS, include_max_duration=False)
 
         # Video specs ------------------------------------------------------
-        self._section_label(scroll, "Video specs")
+        self._section_label(scroll, t("wiz_section_video_specs"))
         self.video_widgets = self._spec_block(scroll, DEFAULT_VIDEO_SPECS, include_max_duration=True)
 
         # Buttons ----------------------------------------------------------
@@ -201,7 +208,7 @@ class _PlatformFormBase:
 
         ctk.CTkButton(
             btn_row,
-            text="Cancel",
+text=t("btn_cancel"),
             fg_color="#555555",
             hover_color="#3d3d3d",
             command=self._cancel,
@@ -209,7 +216,7 @@ class _PlatformFormBase:
 
         self.save_button = ctk.CTkButton(
             btn_row,
-            text=self.SAVE_BUTTON_LABEL,
+            text=t(self._save_button_key()),
             command=self._save,
         )
         self.save_button.pack(side="right")
@@ -262,14 +269,14 @@ class _PlatformFormBase:
             combo.pack(fill="x")
             widgets[key] = combo
 
-        add_entry(0, 0, "Width", "width")
-        add_entry(0, 1, "Height", "height")
-        add_entry(1, 0, "Rotate (0/90/180/270, blank = none)", "rotate")
-        add_combo(1, 1, "Mirror", "mirror", ["false", "true"])
-        add_combo(2, 0, "Resize mode", "resize_mode", RESIZE_MODES)
-        add_entry(2, 1, "Filename", "filename")
+        add_entry(0, 0, t("wiz_spec_width"), "width")
+        add_entry(0, 1, t("wiz_spec_height"), "height")
+        add_entry(1, 0, t("wiz_spec_rotate"), "rotate")
+        add_combo(1, 1, t("wiz_spec_mirror"), "mirror", ["false", "true"])
+        add_combo(2, 0, t("wiz_spec_resize"), "resize_mode", RESIZE_MODES)
+        add_entry(2, 1, t("wiz_spec_filename"), "filename")
         if include_max_duration:
-            add_entry(3, 0, "Max duration (seconds)", "max_duration")
+            add_entry(3, 0, t("wiz_spec_max_duration"), "max_duration")
 
         block.grid_columnconfigure(0, weight=1)
         block.grid_columnconfigure(1, weight=1)
@@ -341,11 +348,11 @@ class _PlatformFormBase:
         package = get_foreground_package()
         self._set_entry(self.remote_folder_entry, f"/storage/emulated/0/Android/data/{package}/files/Camera1/" or "")
         if not package:
-            show_toast(self.win, "Could not detect foreground app", fg_color="#d94040")
+            show_toast(self.win, t("wiz_detect_failed"), fg_color="#d94040")
             return
         self.package_entry.delete(0, "end")
         self.package_entry.insert(0, package)
-        show_toast(self.win, f"Detected: {package}")
+        show_toast(self.win, t("wiz_detected", package=package))
 
     def _cancel(self):
         self.win.destroy()
@@ -358,7 +365,7 @@ class _PlatformFormBase:
 
         platforms_file = get_platforms_file()
         if not platforms_file:
-            show_toast(self.win, "platforms.json not found", fg_color="#d94040", duration=3500)
+            show_toast(self.win, t("wiz_file_not_found"), fg_color="#d94040", duration=3500)
             return
 
         try:
@@ -366,11 +373,11 @@ class _PlatformFormBase:
                 data = json.load(f)
         except Exception as e:
             print(f"[ERROR] Could not read platforms.json: {e}")
-            show_toast(self.win, "Could not read platforms.json", fg_color="#d94040", duration=3500)
+            show_toast(self.win, t("wiz_read_failed"), fg_color="#d94040", duration=3500)
             return
 
         if "platforms" not in data or not isinstance(data["platforms"], list):
-            show_toast(self.win, "platforms.json has unexpected structure", fg_color="#d94040", duration=3500)
+            show_toast(self.win, t("wiz_bad_structure"), fg_color="#d94040", duration=3500)
             return
 
         # Backup before write
@@ -380,7 +387,7 @@ class _PlatformFormBase:
             print(f"[+] Backed up platforms.json -> {backup_path}")
         except Exception as e:
             print(f"[ERROR] Backup failed: {e}")
-            show_toast(self.win, "Backup failed, save aborted", fg_color="#d94040", duration=3500)
+            show_toast(self.win, t("wiz_backup_failed"), fg_color="#d94040", duration=3500)
             return
 
         # Apply the change (subclasses decide append vs replace)
@@ -388,7 +395,7 @@ class _PlatformFormBase:
             self._apply_to_platforms_list(data["platforms"], config)
         except Exception as e:
             print(f"[ERROR] Could not apply change: {e}")
-            show_toast(self.win, "Save failed", fg_color="#d94040", duration=3500)
+            show_toast(self.win, t("wiz_save_failed"), fg_color="#d94040", duration=3500)
             return
 
         try:
@@ -401,7 +408,7 @@ class _PlatformFormBase:
                 print("[+] Restored platforms.json from backup")
             except Exception as restore_err:
                 print(f"[ERROR] Restore from backup also failed: {restore_err}")
-            show_toast(self.win, "Save failed", fg_color="#d94040", duration=3500)
+            show_toast(self.win, t("wiz_save_failed"), fg_color="#d94040", duration=3500)
             return
 
         action = "Updated" if self._edit_index is not None else "Added"
@@ -412,7 +419,8 @@ class _PlatformFormBase:
                 self.on_saved(config)
             except Exception as e:
                 print(f"[ERROR] on_saved callback failed: {e}")
-        show_toast(self.parent, f"Platform '{config['name']}' {action.lower()}")
+        saved_msg = t("wiz_saved_updated", name=config["name"]) if self._edit_index is not None else t("wiz_saved_added", name=config["name"])
+        show_toast(self.parent, saved_msg)
         self.win.destroy()
 
     def _apply_to_platforms_list(self, platforms_list, config):
@@ -430,54 +438,51 @@ class _PlatformFormBase:
         photo_mode = self.photo_mode_var.get()
 
         if not name:
-            errors.append("Platform name is required.")
+            errors.append(t("wiz_err_name_required"))
         if not package:
-            errors.append("Package name is required.")
+            errors.append(t("wiz_err_package_required"))
         elif not PACKAGE_NAME_RE.match(package):
-            errors.append(
-                "Package name must look like 'com.example.app' "
-                "(lowercase, dot-separated, at least two segments)."
-            )
+            errors.append(t("wiz_err_package_format"))
 
         # Duplicate check — skip the platform being edited (self-collision)
         for idx, existing in enumerate(self.existing_platforms):
             if idx == self._edit_index:
                 continue
             if name and existing.get("name", "").lower() == name.lower():
-                errors.append(f"A platform named '{name}' already exists.")
+                errors.append(t("wiz_err_name_exists", name=name))
                 break
         for idx, existing in enumerate(self.existing_platforms):
             if idx == self._edit_index:
                 continue
             if package and existing.get("package_name") == package:
-                errors.append(f"A platform with package '{package}' already exists.")
+                errors.append(t("wiz_err_package_exists", package=package))
                 break
 
         # Photo mode + paths
         if photo_mode == "gallery":
             gallery_path = self.gallery_path_entry.get().strip()
             if not gallery_path:
-                errors.append("Gallery path is required for photo_mode 'gallery'.")
+                errors.append(t("wiz_err_gallery_required"))
             elif not gallery_path.startswith("/"):
-                errors.append("Gallery path must be an absolute Android path (start with '/').")
+                errors.append(t("wiz_err_gallery_absolute"))
             elif not gallery_path.endswith("/"):
-                errors.append("Gallery path must end with '/'.")
+                errors.append(t("wiz_err_gallery_trailing"))
             remote_folder = f"/storage/emulated/0/Android/data/{package}/files/Camera1/" if package else ""
         else:  # vcam
             gallery_path = None
             remote_folder = self.remote_folder_entry.get().strip()
             if not remote_folder:
-                errors.append("Remote folder is required for photo_mode 'vcam'.")
+                errors.append(t("wiz_err_remote_required"))
             elif not remote_folder.startswith("/"):
-                errors.append("Remote folder must be an absolute Android path (start with '/').")
+                errors.append(t("wiz_err_remote_absolute"))
             elif not remote_folder.endswith("/"):
-                errors.append("Remote folder must end with '/'.")
+                errors.append(t("wiz_err_remote_trailing"))
 
 
 
-        photo, photo_errors = self._validate_specs(self.photo_widgets, "Photo", include_max_duration=False)
+        photo, photo_errors = self._validate_specs(self.photo_widgets, "wiz_label_photo", include_max_duration=False)
         errors.extend(photo_errors)
-        video, video_errors = self._validate_specs(self.video_widgets, "Video", include_max_duration=True)
+        video, video_errors = self._validate_specs(self.video_widgets, "wiz_label_video", include_max_duration=True)
         errors.extend(video_errors)
 
         if errors:
@@ -498,19 +503,27 @@ class _PlatformFormBase:
         errors = []
         spec = {}
 
+        # `label` arrives as a translation key ("wiz_label_photo"/"wiz_label_video").
+        label_text = t(label)
+        field_names = {
+            "width": t("wiz_field_width"),
+            "height": t("wiz_field_height"),
+        }
+
         for key in ("width", "height"):
+            field = field_names[key]
             raw = widgets[key].get().strip()
             if not raw:
-                errors.append(f"{label} {key} is required.")
+                errors.append(t("wiz_err_field_required", label=label_text, field=field))
                 continue
             try:
                 value = int(raw)
                 if value <= 0:
-                    errors.append(f"{label} {key} must be a positive integer.")
+                    errors.append(t("wiz_err_field_positive", label=label_text, field=field))
                     continue
                 spec[key] = value
             except ValueError:
-                errors.append(f"{label} {key} must be a whole number.")
+                errors.append(t("wiz_err_field_whole", label=label_text, field=field))
 
         raw_rotate = widgets["rotate"].get().strip()
         if raw_rotate == "":
@@ -519,11 +532,11 @@ class _PlatformFormBase:
             try:
                 rotate_val = int(raw_rotate)
                 if rotate_val not in (0, 90, 180, 270):
-                    errors.append(f"{label} rotate must be 0, 90, 180, 270, or blank.")
+                    errors.append(t("wiz_err_rotate_value", label=label_text))
                 else:
                     spec["rotate"] = rotate_val
             except ValueError:
-                errors.append(f"{label} rotate must be a whole number or blank.")
+                errors.append(t("wiz_err_rotate_whole", label=label_text))
 
         raw_mirror = widgets["mirror"].get().strip().lower()
         if raw_mirror == "true":
@@ -533,48 +546,48 @@ class _PlatformFormBase:
         elif raw_mirror == "":
             spec["mirror"] = None
         else:
-            errors.append(f"{label} mirror must be true or false.")
+            errors.append(t("wiz_err_mirror_bool", label=label_text))
 
         raw_resize = widgets["resize_mode"].get().strip()
         if raw_resize not in RESIZE_MODES:
-            errors.append(f"{label} resize mode must be one of {', '.join(RESIZE_MODES)}.")
+            errors.append(t("wiz_err_resize_mode", label=label_text, modes=", ".join(RESIZE_MODES)))
         else:
             spec["resize_mode"] = raw_resize
 
         raw_filename = widgets["filename"].get().strip()
         if not raw_filename:
-            errors.append(f"{label} filename is required.")
+            errors.append(t("wiz_err_filename_required", label=label_text))
         elif "/" in raw_filename or "\\" in raw_filename:
-            errors.append(f"{label} filename must not contain slashes.")
+            errors.append(t("wiz_err_filename_slashes", label=label_text))
         else:
             spec["filename"] = raw_filename
 
         if include_max_duration:
             raw_dur = widgets["max_duration"].get().strip()
             if not raw_dur:
-                errors.append(f"{label} max duration is required.")
+                errors.append(t("wiz_err_duration_required", label=label_text))
             else:
                 try:
                     dur = int(raw_dur)
                     if dur <= 0:
-                        errors.append(f"{label} max duration must be a positive integer.")
+                        errors.append(t("wiz_err_duration_positive", label=label_text))
                     else:
                         spec["max_duration"] = dur
                 except ValueError:
-                    errors.append(f"{label} max duration must be a whole number.")
+                    errors.append(t("wiz_err_duration_whole", label=label_text))
 
         return spec, errors
 
     def _show_errors(self, errors):
         popup = ctk.CTkToplevel(self.win)
-        popup.title("Validation errors")
+        popup.title(t("wiz_errors_title"))
         popup.geometry("500x400")
         popup.transient(self.win)
         popup.grab_set()
 
         ctk.CTkLabel(
             popup,
-            text="Please fix the following before saving:",
+            text=t("wiz_errors_heading"),
             font=("Arial", 13, "bold"),
         ).pack(pady=(12, 6), padx=12, anchor="w")
 
@@ -585,7 +598,7 @@ class _PlatformFormBase:
 
         ctk.CTkButton(
             popup,
-            text="OK",
+text=t("btn_ok"),
             width=100,
             command=popup.destroy,
         ).pack(pady=(0, 12))
@@ -601,10 +614,17 @@ class PlatformWizard(_PlatformFormBase):
     Strict validation, backup before write, blocks duplicates.
     """
 
-    WINDOW_TITLE = "Add New Platform"
-    SAVE_BUTTON_LABEL = "Save platform"
-    HEADER_TITLE = "Add New Platform"
-    HEADER_SUBTITLE = "Fill in all fields. The wizard validates everything before saving."
+    def _window_title_key(self):
+        return "wiz_add_window_title"
+
+    def _save_button_key(self):
+        return "wiz_add_save"
+
+    def _header_title_key(self):
+        return "wiz_add_header"
+
+    def _header_subtitle_key(self):
+        return "wiz_add_subtitle"
 
     def _apply_to_platforms_list(self, platforms_list, config):
         platforms_list.append(config)
@@ -621,10 +641,17 @@ class PlatformEditor(_PlatformFormBase):
     and writes back in place. Cannot add or delete — edit only.
     """
 
-    WINDOW_TITLE = "Manage Platforms"
-    SAVE_BUTTON_LABEL = "Save changes"
-    HEADER_TITLE = "Manage Platforms"
-    HEADER_SUBTITLE = "Pick a platform to edit. Use 'Add Platform' on the toolbar to create new ones."
+    def _window_title_key(self):
+        return "wiz_edit_window_title"
+
+    def _save_button_key(self):
+        return "wiz_edit_save"
+
+    def _header_title_key(self):
+        return "wiz_edit_header"
+
+    def _header_subtitle_key(self):
+        return "wiz_edit_subtitle"
 
     @classmethod
     def open(cls, parent, on_saved=None):
@@ -640,7 +667,7 @@ class PlatformEditor(_PlatformFormBase):
             platforms = []
 
         if not platforms:
-            show_toast(parent, "No platforms to edit", fg_color="#d94040")
+            show_toast(parent, t("wiz_no_platforms_edit"), fg_color="#d94040")
             return None
 
         return cls(parent, on_saved=on_saved)
@@ -655,12 +682,12 @@ class PlatformEditor(_PlatformFormBase):
 
     def _build_pre_form(self, scroll):
         """Add a platform-picker dropdown above the identity section."""
-        self._section_label(scroll, "Pick a platform to edit")
+        self._section_label(scroll, t("wiz_section_pick_edit"))
 
         picker_block = ctk.CTkFrame(scroll, fg_color="transparent")
         picker_block.pack(fill="x", padx=4, pady=(0, 6))
 
-        names = [p.get("name", "?") for p in self.existing_platforms] or ["(none)"]
+        names = [p.get("name", "?") for p in self.existing_platforms] or [t("wiz_picker_none")]
         self.picker_combo = ctk.CTkComboBox(
             picker_block,
             values=names,
