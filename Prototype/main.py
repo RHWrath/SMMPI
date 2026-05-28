@@ -19,6 +19,9 @@ from platform_wizard import PlatformWizard, PlatformEditor
 from recording_manager import RecordingManager
 from case_manager import CaseManager
 from about_software_manager import AboutSoftwareManager
+from adb_trigger_listener import AdbTriggerListener
+from audio import on_audio_confirm
+from audio_player import AudioPlayer
 
 
 class MediaDisplayApp:
@@ -64,6 +67,10 @@ class MediaDisplayApp:
         self._resize_warning_active = False
         self._resize_restore_after_id = None
 
+        #Audio
+        self.trigger_listener = None
+        self.selected_audio_path = None
+        self.audio_player = AudioPlayer()
 
     def setup_ui(self):
 
@@ -433,6 +440,9 @@ class MediaDisplayApp:
         image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'}
         # Video extensions
         video_extensions = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'}
+        # Audio extensions
+        audio_extensions = {'.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.opus', '.wma'}
+
 
         if ext in image_extensions:
             print(f"Processing image file: {self.current_selected_file}")
@@ -440,6 +450,9 @@ class MediaDisplayApp:
         elif ext in video_extensions:
             print(f"Processing video file: {self.current_selected_file}")
             on_video_confirm(self)
+        elif ext in audio_extensions:
+            print(f"Arming audio file: {self.current_selected_file}")
+            on_audio_confirm(self)
         else:
             self.info_label.configure(text=f"Unsupported file type: {ext}")
 
@@ -1021,6 +1034,53 @@ class MediaDisplayApp:
             print("[!] Resize blocked: recording is active and dynamic crop update is disabled")
 
         self._resize_restore_after_id = self.app.after_idle(restore_locked_size)
+
+    def start_trigger_listener(self):
+            #check if there is an older listener already running
+            if self.trigger_listener:
+                self.trigger_listener.stop()
+                self.trigger_listener = None
+
+            #create a new AdbTriggerListener object
+            self.trigger_listener = AdbTriggerListener(
+                device_serial=self.selected_device.serial, 
+                on_trigger=lambda message: self.app.after(
+                    0,
+                    lambda: self.handle_android_trigger(message)
+                )
+            )
+            #backgroung log watching 
+            self.trigger_listener.start()               
+    
+    def handle_android_trigger(self, message):
+        print(f"[+] Android trigger received: {message}")
+        self.info_label.configure(text=f"Android trigger received: {message}")
+        
+        if "AUDIO_LISTENER_EVENT type=MIC_OPEN" not in message:
+            return
+        
+        if "sources=VOICE_RECOGNITION" in message:
+            return
+
+        if not self.selected_audio_path:
+            self.info_label.configure(text="No audio file selected.")
+            return
+        
+        self.info_label.configure(text="Trigger received. Playing selected audio")
+        self.play_selected_audio()
+
+    def play_selected_audio(self):
+        self.audio_player.play(
+            self.selected_audio_path,
+            on_finished=self.handle_audio_finished
+        )
+
+    def handle_audio_finished(self):
+        self.app.after(
+            0,
+            lambda: self.info_label.configure(text="Audio playback finished")
+        )
+
 
 
 if __name__ == "__main__":
