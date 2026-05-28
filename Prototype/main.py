@@ -426,7 +426,7 @@ class MediaDisplayApp:
 
         # Detect which platform is in the foreground
         platform = self.detect_active_platform_with_retry()
-        self.update_platform_status(platform)
+        
 
         if platform is None:
             self.info_label.configure(text="No supported platform detected.")
