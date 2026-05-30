@@ -381,7 +381,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 _isRecording = false;
                 OnPropertyChanged(nameof(RecordButtonText));
                 StatusMessage = recording is not null
-                    ? $"Opname opgeslagen: {recording.OutputPath}. SHA-256: {recording.Sha256Hash}"
+                    ? $"Opname opgeslagen: {recording.OutputPath}."
                     : "Opname gestopt, maar er is geen opnamebestand gevonden.";
                 return;
             }
