@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SMMPI.App.ViewModels;
+using SMMPI.Infrastructure.Adb;
 
 namespace SMMPI.App.Services;
 
@@ -166,18 +167,13 @@ public sealed class ThumbnailService
     /// </summary>
     private static string ResolveFfmpegPath()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
+        try
         {
-            var candidate = Path.Combine(dir.FullName, "packages", "Prototype", "ffmpeg", "ffmpeg.exe");
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            dir = dir.Parent;
+            return FfmpegLocator.Resolve();
         }
-
-        return "ffmpeg";
+        catch (FileNotFoundException)
+        {
+            return "ffmpeg";
+        }
     }
 }

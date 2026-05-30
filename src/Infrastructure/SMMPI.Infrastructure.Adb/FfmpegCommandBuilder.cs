@@ -5,6 +5,20 @@ namespace SMMPI.Infrastructure.Adb;
 
 public sealed class FfmpegCommandBuilder
 {
+    private readonly string _ffmpegPath;
+    private readonly string _ffprobePath;
+
+    public FfmpegCommandBuilder()
+        : this(FfmpegLocator.Resolve(), FfmpegLocator.ResolveFfprobe())
+    {
+    }
+
+    public FfmpegCommandBuilder(string ffmpegPath, string ffprobePath)
+    {
+        _ffmpegPath = ffmpegPath;
+        _ffprobePath = ffprobePath;
+    }
+
     public FfmpegCommand BuildVideoConversion(string sourcePath, string outputPath, DeviceProfile profile)
     {
         var filter = BuildScaleFilter(profile, usePadding: false);
@@ -12,7 +26,7 @@ public sealed class FfmpegCommandBuilder
             $"-i {Quote(sourcePath)} -vf {Quote(filter)} -c:v libx264 -preset medium -crf 23 " +
             $"-c:a aac -b:a 128k -pix_fmt yuv420p -movflags +faststart -y {Quote(outputPath)}";
 
-        return new FfmpegCommand("ffmpeg", arguments);
+        return new FfmpegCommand(_ffmpegPath, arguments);
     }
 
     public FfmpegCommand BuildImageLoop(string sourcePath, string outputPath, DeviceProfile profile)
@@ -23,11 +37,11 @@ public sealed class FfmpegCommandBuilder
             $"-loop 1 -i {Quote(sourcePath)} -c:v libx264 -t {duration} -vf {Quote(filter)} " +
             $"-pix_fmt yuv420p -y {Quote(outputPath)}";
 
-        return new FfmpegCommand("ffmpeg", arguments);
+        return new FfmpegCommand(_ffmpegPath, arguments);
     }
 
     public FfmpegCommand BuildDurationProbe(string sourcePath) =>
-        new("ffprobe", $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {Quote(sourcePath)}");
+        new(_ffprobePath, $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {Quote(sourcePath)}");
 
     private static string BuildScaleFilter(DeviceProfile profile, bool usePadding)
     {
