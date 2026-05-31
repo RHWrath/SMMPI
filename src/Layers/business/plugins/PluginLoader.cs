@@ -1,4 +1,0 @@
-namespace Layers.Business.Plugins
-{
-
-}

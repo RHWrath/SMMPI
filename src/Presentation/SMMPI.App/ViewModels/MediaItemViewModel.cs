@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace WPFTest.ViewModels;
+namespace SMMPI.App.ViewModels;
 
 /// <summary>
 /// Presentation model for one media item in the explorer grid.

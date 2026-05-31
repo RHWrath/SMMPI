@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace WPFTest.Commands;
+namespace SMMPI.App.Commands;
 
 public sealed class RelayCommand : ICommand
 {

@@ -1,0 +1,83 @@
+<UserControl x:Class="SMMPI.App.Views.SettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="12" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource PanelCard}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0"
+                           Style="{StaticResource SectionTitle}"
+                           Text="Instellingen" />
+                <StackPanel Grid.Row="1" Margin="0,20,0,0" VerticalAlignment="Top">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Medewerker" />
+                    <TextBox Height="36"
+                             Margin="0,0,0,12"
+                             Text="{Binding OfficerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Zaaknummer" />
+                    <TextBox Height="36"
+                             Margin="0,0,0,16"
+                             Text="{Binding CaseNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Media folder" />
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 Height="36"
+                                 Margin="0,0,10,0"
+                                 IsReadOnly="True"
+                                 Text="{Binding MediaLibraryFolder, Mode=OneWay}" />
+                        <Button Grid.Column="1"
+                                Content="Bladeren..."
+                                Command="{Binding BrowseMediaFolderCommand}"
+                                MinWidth="96" />
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Zaakmap" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 Height="36"
+                                 Margin="0,0,10,0"
+                                 IsReadOnly="True"
+                                 Text="{Binding CaseLogFolder, Mode=OneWay}" />
+                        <Button Grid.Column="1"
+                                Content="Bladeren..."
+                                Command="{Binding BrowseCaseLogFolderCommand}"
+                                MinWidth="96" />
+                    </Grid>
+
+                    <StackPanel Margin="0,20,0,0" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <Button Content="{Binding RecordButtonText}"
+                                Click="ToggleRecording_Click"
+                                MinWidth="120" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource PanelCard}">
+            <StackPanel>
+                <TextBlock Style="{StaticResource SectionTitle}" Text="Telefoonstatus" />
+                <TextBlock Margin="0,14,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding ConnectionStatus, StringFormat=Verbinding: {0}}" />
+                <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding DeviceName, StringFormat=Telefoon: {0}}" />
+                <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource Theme_MutedTextBrush}" Text="{Binding ActiveApp, StringFormat=Actieve app: {0}}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

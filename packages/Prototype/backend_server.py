@@ -486,13 +486,26 @@ def handle_command(state, command):
         if name == "start_recording":
             from recording_manager import RecordingManager
 
-            if not state.session:
-                raise RuntimeError("No active case session")
+            case_folder = args.get("caseFolder")
+            officer_name = args.get("officerName")
+            case_number = args.get("caseNumber")
+            case_root = args.get("caseRoot")
+            if state.session:
+                case_folder = state.session.case_path
+            elif officer_name and case_number and case_root:
+                session = Session(officer_name, case_number, case_root)
+                session.ensure_case_folder()
+                state.session = session
+                case_folder = session.case_path
+            elif not case_folder:
+                case_folder = os.path.join(os.path.expanduser("~"), "Desktop")
+
+            os.makedirs(case_folder, exist_ok=True)
             if state.recording is None:
                 state.recording = RecordingManager()
             platform = get_active_platform() or {"name": "UnknownPlatform"}
             state.recording.create_session(
-                case_folder=state.session.case_path,
+                case_folder=case_folder,
                 platform_name=platform["name"],
                 capture_x=int(args["x"]),
                 capture_y=int(args["y"]),
@@ -502,7 +515,7 @@ def handle_command(state, command):
                 audio_device=args.get("audioDevice"),
             )
             state.recording.start_recording()
-            state.reply(request_id, platform=platform, isRecording=True)
+            state.reply(request_id, platform=platform, isRecording=True, caseFolder=case_folder)
             return
 
         if name == "stop_recording":

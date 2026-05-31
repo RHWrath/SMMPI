@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace WPFTest.ViewModels;
+namespace SMMPI.App.ViewModels;
 
 /// <summary>
 /// Base type for view models that need property change notifications.

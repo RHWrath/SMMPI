@@ -1,4 +1,4 @@
-namespace WPFTest.Services;
+namespace SMMPI.App.Services;
 
 /// <summary>
 /// Abstraction for choosing folders from the WPF view model layer.
