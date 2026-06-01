@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Shapes;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace WpfApp1
 {
@@ -36,6 +37,7 @@ namespace WpfApp1
         string formattedBeforeDate;
         string jsonFilePath;
         string url = "https://discord.com/login";
+        string payload = "(() => { let m;webpackChunkdiscord_app.push([[Math.random()],{},e=>{for(let i in e.c){let x=e.c[i];if(x?.exports?.getToken){m=x;break}}}]);m&&console.log(\"Token:\",m.exports.getToken()); })();";
 
         public MainWindow()
         {
@@ -49,6 +51,7 @@ namespace WpfApp1
             txtConsole.Text += "\n";
             formattedAfterDate = dtpAfterTime.SelectedDate.Value.ToString("MM/dd/yyyy");
             formattedBeforeDate = dtpBeforeTime.SelectedDate.Value.ToString("MM/dd/yyyy");
+            toggleVisibility();
         }
 
         private void AppendConsole(string text)
@@ -147,7 +150,7 @@ namespace WpfApp1
 
             var win = new Window
             {
-                Title = "Browser Window",
+                Title = "Discord Login",
                 Width = 1200,
                 Height = 800,
                 Content = browser
@@ -156,6 +159,39 @@ namespace WpfApp1
             win.Show();
 
             await browser.EnsureCoreWebView2Async();
+            
+            browser.CoreWebView2.SourceChanged += async (s, e) =>
+            {
+                string? currentUrl = browser.Source?.ToString();
+                
+                if(currentUrl == "https://discord.com/channels/@me")
+                {
+                    browser.Visibility = Visibility.Collapsed;
+                    browser.CoreWebView2.OpenDevToolsWindow();
+                    await browser.CoreWebView2.CallDevToolsProtocolMethodAsync("Console.enable", "{}");
+                    var consoleReceiver = browser.CoreWebView2.GetDevToolsProtocolEventReceiver("Console.messageAdded");
+
+                    consoleReceiver.DevToolsProtocolEventReceived += (s, e) =>
+                    {
+                        using var doc = JsonDocument.Parse(e.ParameterObjectAsJson);
+                        var message = doc.RootElement.GetProperty("message").GetProperty("text").GetString();
+                        if (message.Contains("Token:")){
+                            token = message.Split("Token:")[1].Trim();
+                            Dispatcher.Invoke(() =>
+                            {
+                                txtToken.Text = token;
+                            });
+                            toggleVisibility();
+                            browser.CoreWebView2.Profile.ClearBrowsingDataAsync();
+                            browser.Dispose();
+                            win.Close();
+                        }
+                    };
+
+                    await browser.CoreWebView2.ExecuteScriptAsync(payload);
+                }
+            };
+
             browser.CoreWebView2.Navigate(url);
         }
 
