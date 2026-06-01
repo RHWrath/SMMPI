@@ -1,8 +1,12 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
+using Microsoft.Win32;
 using SMMPI.Infrastructure.Plugins.Tools;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -31,6 +35,7 @@ namespace WpfApp1
         string formattedAfterDate;
         string formattedBeforeDate;
         string jsonFilePath;
+        string url = "https://discord.com/login";
 
         public MainWindow()
         {
@@ -136,9 +141,22 @@ namespace WpfApp1
             await ProcessHandler.TryRunProcessAsync("explorer.exe", outputdir, slnRoot);
         }
 
-        private void btnAuth(object sender, RoutedEventArgs e)
+        private async void btnAuth(object sender, RoutedEventArgs e)
         {
-            toggleVisibility();
+            var browser = new WebView2();
+
+            var win = new Window
+            {
+                Title = "Browser Window",
+                Width = 1200,
+                Height = 800,
+                Content = browser
+            };
+
+            win.Show();
+
+            await browser.EnsureCoreWebView2Async();
+            browser.CoreWebView2.Navigate(url);
         }
 
         private void txtChannel_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
