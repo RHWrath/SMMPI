@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\packages\Discord\WpfApp1\Discord.csproj" />
     <ProjectReference Include="..\..\Core\SMMPI.Application\SMMPI.Application.csproj" />
     <ProjectReference Include="..\..\Core\SMMPI.Domain\SMMPI.Domain.csproj" />
     <ProjectReference Include="..\..\Infrastructure\SMMPI.Infrastructure.Adb\SMMPI.Infrastructure.Adb.csproj" />

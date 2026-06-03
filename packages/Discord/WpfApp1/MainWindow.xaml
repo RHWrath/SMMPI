@@ -1,0 +1,340 @@
+﻿<Window x:Class="WpfApp1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        mc:Ignorable="d"
+        Title="Discord Chat Exporter Utility"
+        Height="750"
+        Width="1000"
+        Background="#F8FAFD"
+        Foreground="#1F2937"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F8FAFD"/>
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="White"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2F66E8"/>
+        <SolidColorBrush x:Key="PrimaryBrushHover" Color="#2557CF"/>
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="#D7DFEA"/>
+        <SolidColorBrush x:Key="TextBrushStrong" Color="#111827"/>
+        <SolidColorBrush x:Key="TextBrushMuted" Color="#667085"/>
+        <SolidColorBrush x:Key="InputBackgroundBrush" Color="#F9FBFF"/>
+        <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#0B1220"/>
+        <SolidColorBrush x:Key="ConsoleForegroundBrush" Color="#98F5A5"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+        </Style>
+
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource PrimaryBrushHover}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrushHover}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+            <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="38" />
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+            <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="MinHeight" Value="38" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style TargetType="GroupBox">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+
+        <Style TargetType="DatePicker">
+            <Setter Property="Foreground" Value="{StaticResource TextBrushStrong}" />
+            <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="38" />
+        </Style>
+
+        <Style x:Key="ConsoleTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource ConsoleForegroundBrush}" />
+            <Setter Property="Background" Value="{StaticResource ConsoleBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="FontFamily" Value="Consolas" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource PageBackgroundBrush}">
+        <Border Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderThickness="1"
+                CornerRadius="16"
+                Padding="24"
+                Margin="24">
+            <Grid HorizontalAlignment="Center"
+                  Width="900"
+                  ShowGridLines="False">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="24"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="24"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Button Content="Authenticate User"
+                        Grid.Row="0"
+                        Width="140"
+                        HorizontalAlignment="Center"
+                        Click="btnAuth"/>
+
+                <TextBlock Grid.Row="0"
+                           Grid.Column="2"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Text="Discord Chat Exporter Utility"
+                           FontWeight="Bold"
+                           FontSize="24"
+                           Foreground="{StaticResource TextBrushStrong}"/>
+
+                <Label Content="Enter token:"
+                       Grid.Row="2"
+                       Grid.Column="0"
+                       VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="2,0,0,0"/>
+
+                <TextBox Grid.Column="2"
+                         Grid.Row="2"
+                         x:Name="txtToken"
+                         Width="300"
+                         HorizontalAlignment="Left"
+                         TextChanged="txtToken_TextChanged"/>
+
+                <GroupBox x:Name="ExportGroup"
+                          Header="Export Settings"
+                          Grid.Row="4"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="3"
+                          Visibility="Visible">
+
+                    <Grid Margin="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Button Content="DM kanalen opvragen"
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Width="200"
+                                HorizontalAlignment="Left"
+                                Click="btnDms"/>
+
+                        <Grid Grid.Row="0" Grid.Column="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Label Content="Enter channel:"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center"/>
+
+                            <TextBox x:Name="txtChannel"
+                                     Grid.Column="1"
+                                     Margin="8,0,0,0"
+                                     TextChanged="txtChannel_TextChanged"/>
+
+                            <Label Content="Enter server ID:"
+                                   Grid.Column="3"
+                                   Margin="0,0,0,0"
+                                   VerticalAlignment="Center"/>
+
+                            <TextBox x:Name="txtServer"
+                                     Grid.Column="4"
+                                     Margin="8,0,-16,0"
+                                     TextChanged="txtServer_TextChanged"/>
+                        </Grid>
+
+                        <Button Content="Serverkanalen opvragen"
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Width="200"
+                                HorizontalAlignment="Left"
+                                Click="btnChannels"/>
+
+                        <CheckBox x:Name="chkExportAll"
+                                  Grid.Row="4"
+                                  Grid.Column="0"
+                                  Width="80"
+                                  HorizontalAlignment="Left"
+                                  FlowDirection="RightToLeft"
+                                  Content="ExportAll"/>
+
+                        <Label Content="Format:"
+                               Grid.Row="6"
+                               Grid.Column="0"
+                               VerticalAlignment="Center"/>
+                        <ComboBox x:Name="cbbFormat"
+                                  Grid.Row="6"
+                                  Grid.Column="0"
+                                  Width="96"
+                                  HorizontalAlignment="Right"/>
+
+                        <Button Content="Export"
+                                Grid.Row="8"
+                                Grid.Column="0"
+                                Width="200"
+                                HorizontalAlignment="Left"
+                                Click="btnExport"/>
+
+                        <Button Content="Output Weergeven"
+                                Grid.Row="10"
+                                Grid.Column="0"
+                                Width="200"
+                                HorizontalAlignment="Left"
+                                Click="btnOutput"/>
+
+                        <Label Content="Export na:"
+                               Grid.Row="12"
+                               Grid.Column="0"
+                               VerticalAlignment="Center"/>
+
+                        <DatePicker x:Name="dtpAfterTime"
+                                    Grid.Row="12"
+                                    Grid.Column="0"
+                                    Width="100"
+                                    HorizontalAlignment="Right"
+                                    SelectedDate="2026-05-01"
+                                    SelectedDateChanged="DtpAfterTime_SelectedDateChanged" />
+
+                        <Label Content="Export voor:"
+                               Grid.Row="14"
+                               Grid.Column="0"
+                               VerticalAlignment="Center"/>
+
+                        <DatePicker x:Name="dtpBeforeTime"
+                                    Grid.Row="14"
+                                    Grid.Column="0"
+                                    Width="100"
+                                    HorizontalAlignment="Right"
+                                    SelectedDate="2026-05-11"
+                                    SelectedDateChanged="DtpBeforeTime_SelectedDateChanged" />
+
+                        <Button x:Name="btnParseJSON"
+                                Content="Parse JSON"
+                                Grid.Row="16"
+                                Grid.Column="0"
+                                Click="btnParseJSON_Clicked"/>
+
+                        <Button x:Name="btnChooseFile"
+                                Content="Bestand Selecteren"
+                                Grid.Row="16"
+                                Grid.Column="2"
+                                Click="btnChooseFile_Clicked"/>
+
+                        <TextBox x:Name="txtConsole"
+                                 Grid.Row="0"
+                                 Grid.Column="2"
+                                 Grid.RowSpan="20"
+                                 MinWidth="300"
+                                 MaxHeight="330"
+                                 Margin="0,0,0,4"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 IsReadOnly="True"
+                                 Style="{StaticResource ConsoleTextBoxStyle}"
+                                 Text="[cmd] ready..."
+                                 ScrollViewer.CanContentScroll="True" />
+                    </Grid>
+                </GroupBox>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

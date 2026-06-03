@@ -1,3 +1,9 @@
+using SMMPI.App.Commands;
+using SMMPI.App.Services;
+using SMMPI.Domain.Entities;
+using SMMPI.Domain.Enums;
+using SMMPI.Domain.Interfaces;
+using SMMPI.Infrastructure.Adb;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
@@ -6,12 +12,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using SMMPI.Domain.Entities;
-using SMMPI.Domain.Enums;
-using SMMPI.Domain.Interfaces;
-using SMMPI.App.Commands;
-using SMMPI.App.Services;
-using SMMPI.Infrastructure.Adb;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using DomainMediaItem = SMMPI.Domain.Entities.MediaItem;
 using DomainMediaType = SMMPI.Domain.Enums.MediaType;
 using DomainTouchAction = SMMPI.Domain.Enums.TouchAction;
@@ -205,7 +206,14 @@ public sealed class MainWindowViewModel : ObservableObject
     public string ActiveApp
     {
         get => _activeApp;
-        private set => SetProperty(ref _activeApp, value);
+        private set
+        {
+            if (!SetProperty(ref _activeApp, value))
+                return;
+
+            if(value.Equals("Discord", StringComparison.OrdinalIgnoreCase))
+                OnActiveAppChanged(value, "Discord");
+        }
     }
 
     public string StatusMessage
@@ -808,6 +816,35 @@ public sealed class MainWindowViewModel : ObservableObject
 
             Interlocked.Decrement(ref owner._busyCount);
             owner.OnPropertyChanged(nameof(AppCursor));
+        }
+    }
+
+    private void OnActiveAppChanged(string value, string expectedApp)
+    {
+        if (!string.Equals(value, expectedApp, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var existingWindow = System.Windows.Application.Current.Windows
+            .OfType<Window>()
+            .FirstOrDefault(w => string.Equals(w.Title, expectedApp, StringComparison.OrdinalIgnoreCase));
+
+        if (existingWindow is not null)
+        {
+            if (existingWindow.WindowState == WindowState.Minimized)
+                existingWindow.WindowState = WindowState.Normal;
+
+            existingWindow.Activate();
+            return;
+        }
+
+        try
+        {
+            var discordWindow = new WpfApp1.MainWindow();
+            discordWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(ex.ToString(), "Discord window error");
         }
     }
 }
