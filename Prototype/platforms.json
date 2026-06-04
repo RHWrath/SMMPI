@@ -9,7 +9,7 @@
       "photo": {
         "width": 1080,
         "height": 1920,
-        "rotate": null,
+        "rotate": 180,
         "mirror": false,
         "resize_mode": "fill",
         "filename": "1000.bmp"

@@ -40,4 +40,4 @@ class FolderSelector:
         print(f"Selected folder: {folder_path}")
         media_files = self.get_media_files(folder_path)
         print(f"Found {len(media_files)} media files")
-        return folder_path, media_filess
+        return folder_path, media_files

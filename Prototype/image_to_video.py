@@ -279,13 +279,19 @@ def push_image_as_video(app_instance, platform_config):
     from adb_setup import push_file
     from adb_utils import force_stop_and_relaunch
 
+    # The source here is a still image, so its geometry and orientation come
+    # from the "photo" block. The "video" block's rotate/mirror exist to orient
+    # real recorded video for the VCAM sensor — applying them to an already-
+    # upright still frame twists it. Only the delivery filename is taken from
+    # the video block, because VCAM delivery is still an mp4.
+    photo_config = platform_config["photo"]
     video_config = platform_config["video"]
     remote_folder = platform_config["remote_folder"]
-    width = video_config["width"]
-    height = video_config["height"]
-    rotate = video_config.get("rotate")
-    mirror = video_config.get("mirror")
-    resize_mode = video_config.get("resize_mode", "fill")
+    width = photo_config["width"]
+    height = photo_config["height"]
+    rotate = photo_config.get("rotate")
+    mirror = photo_config.get("mirror")
+    resize_mode = photo_config.get("resize_mode", "fill")
     filename = video_config.get("filename", "virtual.mp4")
 
     app_instance.info_label.configure(
