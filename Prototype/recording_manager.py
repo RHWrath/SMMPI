@@ -136,7 +136,8 @@ class RecordingManager:
             "-i", f"title={session.window_title}",
             "-vf", f"crop@phone={session.capture_width}:{session.capture_height}:{session.capture_x}:{session.capture_y}",
             "-c:v", "libx264",
-            "-preset", "veryfast",
+            "-preset", "faster",
+            "-crf", "18",
             "-pix_fmt", "yuv420p",
             session.temp_file_path
         ]
