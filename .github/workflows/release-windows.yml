@@ -1,9 +1,5 @@
 # Builds a self-contained Windows x64 ZIP and uploads a draft GitHub Release.
 #
-# Authentication: built-in GITHUB_TOKEN (no repository secret required).
-# Repository setting required:
-#   Settings → Actions → General → Workflow permissions → Read and write permissions
-#
 # Re-running the same version fails if tag v{version} already exists; use a new version
 # or delete the existing tag/release on GitHub first.
 
