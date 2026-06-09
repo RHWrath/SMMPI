@@ -20,7 +20,6 @@
         <SolidColorBrush x:Key="Theme_MutedTextBrush" Color="{DynamicResource Theme_MutedTextColor}" />
 
         <Style TargetType="Window">
-            <Setter Property="Icon" Value="/Assets/app-icon.ico" />
             <Setter Property="Background" Value="{DynamicResource Theme_BackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource Theme_TextBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />

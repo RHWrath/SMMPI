@@ -1,0 +1,57 @@
+# Builds a self-contained Windows x64 ZIP and uploads a draft GitHub Release.
+#
+# Authentication: built-in GITHUB_TOKEN (no repository secret required).
+# Repository setting required:
+#   Settings → Actions → General → Workflow permissions → Read and write permissions
+#
+# Re-running the same version fails if tag v{version} already exists; use a new version
+# or delete the existing tag/release on GitHub first.
+
+name: Release Windows (SMMPI Operator)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build release ZIP
+        shell: pwsh
+        run: ./scripts/build-release.ps1 -Version '${{ inputs.version }}'
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: SMMPI Operator v${{ inputs.version }} (Windows)
+          body: |
+            Draft release for stakeholder testing (Windows x64).
+
+            **Installatie:** pak het ZIP-bestand uit en start `SMMPI.exe`.
+            Zie `Opstarten.md` in het archief.
+
+            Gebouwd door workflow `${{ github.workflow }}` op commit `${{ github.sha }}`.
+          files: SMMPI-Operator-windows-v${{ inputs.version }}.zip
+          draft: true
+          prerelease: false
+          generate_release_notes: false
+          fail_on_unmatched_files: true
