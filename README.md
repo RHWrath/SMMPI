@@ -35,6 +35,10 @@ The underlying goal is to collect as much relevant information as possible with 
 
 Installation instructions can be found in the [Installation Guide](./docs/Installation.md).
 
+## Release build (Windows ZIP)
+
+See [Builden voor release](./docs/Builden-voor-release.md) (Dutch) for terminal commands, versioning, and maintenance of the release scripts.
+
 ## Project Architecture
 
 A detailed explanation of the project architecture, solution structure, layers, and project references can be found in the [Project Architecture](./docs/project-architecture.md).
