@@ -27,5 +27,10 @@ packages/Prototype/**/*.pyc
 packages/Prototype/dist/
 packages/Prototype/build/
 
+/Output
+/tests/DCETest/output
+/packages/Discord/Output
+/packages/Discord/WpfApp1/Output
+
 /artifacts
 SMMPI-Operator-windows-v*.zip
