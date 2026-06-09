@@ -6,7 +6,7 @@ namespace SMMPI.App.Services;
 /// <summary>
 /// Stores operator preferences locally so the app can restore them on the next startup.
 /// </summary>
-public sealed class OperatorSettingsStore
+public sealed class OperatorSettingsStore : IOperatorSettingsStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _settingsPath;
@@ -15,12 +15,27 @@ public sealed class OperatorSettingsStore
     /// Creates a settings store under the current Windows user's application data folder.
     /// </summary>
     public OperatorSettingsStore()
+        : this(null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a settings store that writes to the supplied file path, or the default AppData path when null.
+    /// </summary>
+    public OperatorSettingsStore(string? settingsFilePath)
+    {
+        _settingsPath = string.IsNullOrWhiteSpace(settingsFilePath)
+            ? BuildDefaultSettingsPath()
+            : settingsFilePath;
+    }
+
+    private static string BuildDefaultSettingsPath()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var folder = string.IsNullOrWhiteSpace(appData)
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".smmpi")
             : Path.Combine(appData, "SMMPI");
-        _settingsPath = Path.Combine(folder, "operator-settings.json");
+        return Path.Combine(folder, "operator-settings.json");
     }
 
     /// <summary>

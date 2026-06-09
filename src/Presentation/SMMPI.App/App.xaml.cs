@@ -65,8 +65,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IMediaLibraryService, MediaLibraryService>();
 
         services.AddSingleton<IFolderPicker, FolderBrowserPicker>();
-        services.AddSingleton<ThumbnailService>();
-        services.AddSingleton<OperatorSettingsStore>();
+        services.AddSingleton<IThumbnailService, ThumbnailService>();
+        services.AddSingleton<IOperatorSettingsStore, OperatorSettingsStore>();
         services.AddSingleton<IRecordingService, ScrcpyRecordingService>();
         services.AddTransient<MainWindowViewModel>();
 

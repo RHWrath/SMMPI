@@ -10,7 +10,7 @@ namespace SMMPI.App.Services;
 /// <summary>
 /// Creates still-image thumbnails for the media explorer and decodes stream frames for display.
 /// </summary>
-public sealed class ThumbnailService
+public sealed class ThumbnailService : IThumbnailService
 {
     /// <summary>
     /// Creates a thumbnail for an image or extracts a representative frame for a video.
