@@ -1,27 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="MSTest" Version="4.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\packages\Discord\WpfApp1\Discord.csproj" />
+    <ProjectReference Include="..\..\src\Presentation\SMMPI.App\SMMPI.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <Using Include="System.IO" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
+
+  <!-- WinExe references copy the .exe but not the companion .dll that unit tests need at runtime. -->
+  <Target Name="CopySmmpiAppDll" AfterTargets="Build" BeforeTargets="VSTest">
+    <Copy
+      SourceFiles="..\..\src\Presentation\SMMPI.App\bin\$(Configuration)\net10.0-windows\SMMPI.dll"
+      DestinationFolder="$(OutputPath)"
+      SkipUnchangedFiles="true"
+      Condition="Exists('..\..\src\Presentation\SMMPI.App\bin\$(Configuration)\net10.0-windows\SMMPI.dll')" />
+  </Target>
 
 </Project>

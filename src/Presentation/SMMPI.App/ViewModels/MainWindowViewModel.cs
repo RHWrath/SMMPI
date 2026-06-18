@@ -32,8 +32,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly IAndroidStreamingService _androidStreamingService;
     private readonly IRecordingService _recordingService;
     private readonly IFolderPicker _folderPicker;
-    private readonly ThumbnailService _thumbnailService;
-    private readonly OperatorSettingsStore _settingsStore;
+    private readonly IThumbnailService _thumbnailService;
+    private readonly IOperatorSettingsStore _settingsStore;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Channel<StreamFrame> _frames = Channel.CreateBounded<StreamFrame>(new BoundedChannelOptions(1)
     {
@@ -78,8 +78,8 @@ public sealed class MainWindowViewModel : ObservableObject
         IAndroidStreamingService androidStreamingService,
         IRecordingService recordingService,
         IFolderPicker folderPicker,
-        ThumbnailService thumbnailService,
-        OperatorSettingsStore settingsStore)
+        IThumbnailService thumbnailService,
+        IOperatorSettingsStore settingsStore)
     {
         _deviceController = deviceController;
         _streamService = streamService;
