@@ -7,6 +7,7 @@ import time
 import sys
 import subprocess
 from utils import get_ffmpeg_path
+from utils import sync_case_to_nas
 
 
 @dataclass
@@ -238,7 +239,9 @@ class RecordingManager:
         print(f"[REC][RM][REMUX] stderr = {result.stderr}")
 
         if result.returncode != 0:
-            raise RuntimeError("Failed to remux MKV to MP4.")     
+            raise RuntimeError("Failed to remux MKV to MP4.")
+         # Sync case folder to NAS after successful remux
+        sync_case_to_nas(self.current_session.case_name)     
         
         
     

@@ -1,3 +1,8 @@
 {
-  "case_root": "C:/Users/vetka/Desktop/Cases"
+  "case_root": "C:/Users/locad/OneDrive/Documents/Open Learning/Cases",
+
+  "nas_enabled": true,
+  "nas_path": "\\\\192.168.50.1\\cases",
+  "nas_username": "rik",
+  "nas_password": "123456"
 }

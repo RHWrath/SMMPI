@@ -1,6 +1,38 @@
 import os
 import sys
 import shutil
+import json
+import shutil
+from pathlib import Path
+
+
+def sync_case_to_nas(case_name):
+    config_path = Path(__file__).parent / "config.json"
+
+    with open(config_path, "r") as f:
+        config = json.load(f)
+
+    if not config.get("nas_enabled", False):
+        print("[NAS] NAS sync disabled.")
+        return
+
+    local_case = Path(config["case_root"]) / case_name
+    nas_root = Path(config["nas_path"])
+    nas_case = nas_root / case_name
+
+    if not local_case.exists():
+        print(f"[NAS] Local case not found: {local_case}")
+        return
+
+    if not nas_root.exists():
+        print(f"[NAS] Cannot reach NAS: {nas_root}")
+        return
+
+    try:
+        shutil.copytree(local_case, nas_case, dirs_exist_ok=True)
+        print(f"[NAS] Synced '{case_name}' → {nas_case}")
+    except Exception as e:
+        print(f"[NAS] Sync failed: {e}")
 
 
 def get_base_path():
