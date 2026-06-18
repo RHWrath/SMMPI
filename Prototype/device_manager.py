@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from ppadb.client import Client as AdbClient
+from lang import t
 
 class DeviceManager:
     def __init__(self, app, on_device_selected):
@@ -22,7 +23,7 @@ class DeviceManager:
             pass
 
         device_window = ctk.CTkToplevel(self.app)
-        device_window.title("Select Android Device")
+        device_window.title(t("device_window_title"))
         device_window.geometry("500x400")
         device_window.transient(self.app)
         device_window.grab_set()
@@ -34,21 +35,21 @@ class DeviceManager:
 
         title_label = ctk.CTkLabel(
             device_window,
-            text="Connect Android Device",
+            text=t("device_heading"),
             font=("Arial", 18, "bold")
         )
         title_label.pack(pady=20)
 
         instructions = ctk.CTkLabel(
             device_window,
-            text="Make sure USB debugging is enabled on your device\nand it's connected via USB.",
+            text=t("device_instructions"),
             font=("Arial", 12)
         )
         instructions.pack(pady=10)
 
         refresh_button = ctk.CTkButton(
             device_window,
-            text="Refresh Devices",
+text=t("btn_refresh_devices"),
             command=lambda: self.refresh_device_list()
         )
         refresh_button.pack(pady=10)
@@ -57,7 +58,7 @@ class DeviceManager:
         device_listbox.pack(fill="both", expand=True, padx=20, pady=10)
         self.device_listbox = device_listbox
 
-        status_label = ctk.CTkLabel(device_window, text="Click 'Refresh Devices' to scan for devices")
+        status_label = ctk.CTkLabel(device_window, text=t("device_scan_prompt"))
         status_label.pack(pady=5)
         self.status_label = status_label
 
@@ -66,14 +67,14 @@ class DeviceManager:
 
         connect_button = ctk.CTkButton(
             button_frame,
-            text="Connect",
+text=t("btn_connect"),
             command=lambda: self.connect_device()
         )
         connect_button.pack(side="left", padx=10)
 
         cancel_button = ctk.CTkButton(
             button_frame,
-            text="Cancel",
+text=t("btn_cancel"),
             command=lambda: self.cancel_device_selection()
         )
         cancel_button.pack(side="left", padx=10)
@@ -116,10 +117,10 @@ class DeviceManager:
             self.available_devices = []
 
             if not devices:
-                self.status_label.configure(text="No devices found. Check USB debugging and connection.")
+                self.status_label.configure(text=t("device_none_found"))
                 return
 
-            self.status_label.configure(text=f"Found {len(devices)} device(s). Select one to continue.")
+            self.status_label.configure(text=t("device_found_count", count=len(devices)))
 
             for i, device in enumerate(devices):
                 try:
@@ -131,7 +132,7 @@ class DeviceManager:
 
                 self.available_devices.append(device)
 
-                device_text = f"{manufacturer} {model}\nSerial: {device.serial}"
+                device_text = t("device_entry", manufacturer=manufacturer, model=model, serial=device.serial)
 
                 def make_select_command(index):
                     return lambda: self.select_device_by_index(index)
@@ -147,7 +148,7 @@ class DeviceManager:
                 device_button.pack(fill="x", pady=5)
 
         except Exception as e:
-            self.status_label.configure(text=f"Error scanning devices: {str(e)}")
+            self.status_label.configure(text=t("device_error_scan", error=str(e)))
 
     def select_device_by_index(self, index):
         self.selected_device_index = index
@@ -161,7 +162,7 @@ class DeviceManager:
                 device_name = self.selected_device.serial
 
             self.status_label.configure(
-                text=f"✓ Selected: {device_name}.",
+                text=t("device_selected", name=device_name),
                 text_color="green"
             )
 
@@ -182,7 +183,7 @@ class DeviceManager:
             except Exception as e:
                 print(f"connect_device: Error restoring main window - {e}")
         else:
-            self.status_label.configure(text="Please select a device first")
+            self.status_label.configure(text=t("device_select_first"))
 
     def cancel_device_selection(self):
         self.selected_device = None
