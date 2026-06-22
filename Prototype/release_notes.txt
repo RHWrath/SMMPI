@@ -1,26 +1,27 @@
-Initial stable prototype release of the ADB Media Manager system.
-
 ----------------------------------------
-[FEATURES]
+              [UPDATE]
 ----------------------------------------
 
-- Automatic platform detection
-- Case management system
-- Phone screen recording (evidence recording)
-- Platform management
-- Keyboard integration
+- Audio Injection – Working V1
+    # Added the first working version of the audio injection feature.
+    # Please read the User Guide and Technical Guide before using this functionality.
+- UI Improvements
+    # Updated several parts of the user interface to improve usability and operator clarity.
+- Installer Update
+    # Updated the Windows installer.
+    # The installer now includes the required Android application package.
+- Safer Application Update Flow
+    # Improved the update process to make application updates safer.
+    # If an update fails, the installer attempts to roll back to the previous working application version.
 
 ----------------------------------------
-[CURRENT PLATFORMS]
+            [KNOWN ISSUE]
 ----------------------------------------
 
-- Snapchat
-- Discord
-- WhatsApp
-
-----------------------------------------
-[KNOWN ISSUE]
-----------------------------------------
-
-- adb.exe opens a command window during runtime. 
-    DO NOT CLOSE this window, otherwise the device connection will terminate.
+- ADB Command Window During Runtime
+    # adb.exe may open a command window while the application is running.
+    # Do not close this window manually, because doing so will terminate the device connection.
+- Phone Physical Buttons Disabled During Audio Injection
+    # In the current version, the audio injection feature disables the phone’s physical buttons, including:
+    # Volume Up / Volume Down / Power button
+    # This should not affect the main application features or the core functionality of the system.
