@@ -5,6 +5,7 @@ import os
 import sys
 import threading
 import time
+import subprocess
 
 from folder_selector import FolderSelector
 from image_display import ImageDisplay
@@ -22,6 +23,7 @@ from about_software_manager import AboutSoftwareManager
 from adb_trigger_listener import AdbTriggerListener
 from audio import on_audio_confirm
 from audio_player import AudioPlayer
+from utils import get_ffprobe_path
 import lang
 from lang import t, show_language_picker
 
@@ -1105,10 +1107,14 @@ class MediaDisplayApp:
         print(f"[+] Android trigger received: {message}")
         self.info_label.configure(text=f"Android trigger received: {message}")
         
-        if "AUDIO_LISTENER_EVENT type=MIC_OPEN" not in message:
+        if "AUDIO_LISTENER_EVENT type=MIC_CLOSED" in message:
+            self.info_label.configure(text="Mic closed. Stopping selected audio")
+            self.audio_is_playing = False
+            self.audio_player.stop()
+            self.selected_audio_path = None
             return
         
-        if "sources=VOICE_RECOGNITION" in message:
+        if "AUDIO_LISTENER_EVENT type=MIC_OPEN" not in message:
             return
 
         if not self.selected_audio_path:
@@ -1119,16 +1125,65 @@ class MediaDisplayApp:
         self.play_selected_audio()
 
     def play_selected_audio(self):
+        self.audio_duration = self.get_audio_duration(self.selected_audio_path)
+        self.audio_start_time = time.time()
+        self.audio_is_playing = True
+
         self.audio_player.play(
             self.selected_audio_path,
             on_finished=self.handle_audio_finished
         )
 
+        self.update_audio_time_label()
+
     def handle_audio_finished(self):
+
         self.app.after(
             0,
             lambda: self.info_label.configure(text="Audio playback finished")
         )
+
+    def get_audio_duration(self, audio_path):
+        ffprobe_path = get_ffprobe_path()
+        result = subprocess.run(
+            [
+                ffprobe_path,
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                audio_path
+            ],
+            capture_output=True,
+            text=True
+        )
+
+        try:
+            return float(result.stdout.strip())
+        except ValueError:
+            return 0
+        
+    
+    def format_audio_time(self, seconds):
+        seconds = int(seconds)
+        minutes = seconds // 60
+        seconds = seconds % 60
+        return f"{minutes:02d}:{seconds:02d}"
+    
+    def update_audio_time_label(self):
+        if not self.audio_is_playing:
+            return
+        
+        elapsed = time.time() - self.audio_start_time
+
+        if elapsed >= self.audio_duration:
+            elapsed = self.audio_duration
+
+        self.info_label.configure(
+            text=f"Audio: {self.format_audio_time(elapsed)} / {self.format_audio_time(self.audio_duration)}"
+        )
+
+        if elapsed < self.audio_duration:
+            self.app.after(250, self.update_audio_time_label)
 
 
 

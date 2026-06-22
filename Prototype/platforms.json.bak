@@ -19,7 +19,7 @@
         "height": 1920,
         "rotate": 270,
         "mirror": true,
-        "resize_mode": "stretch",
+        "resize_mode": "fill",
         "filename": "virtual.mp4",
         "max_duration": 60
       }

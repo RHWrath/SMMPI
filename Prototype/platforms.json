@@ -71,6 +71,30 @@
         "max_duration": 60,
         "filename": "virtual.mp4"
       }
+    },
+    {
+      "name": "Instagram",
+      "package_name": "com.instagram.android",
+      "remote_folder": "/storage/emulated/0/Android/data/com.instagram.android/files/Camera1/",
+      "photo_mode": "gallery",
+      "gallery_path": "/storage/emulated/0/DCIM/Camera/",
+      "photo": {
+        "width": 4032,
+        "height": 3024,
+        "rotate": null,
+        "mirror": false,
+        "resize_mode": "contain",
+        "filename": "virtual_photo.jpg"
+      },
+      "video": {
+        "width": 1920,
+        "height": 1080,
+        "rotate": null,
+        "mirror": false,
+        "resize_mode": "contain",
+        "filename": "virtual.mp4",
+        "max_duration": 60
+      }
     }
   ]
 }

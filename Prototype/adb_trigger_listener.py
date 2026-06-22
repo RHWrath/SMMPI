@@ -75,12 +75,16 @@ class AdbTriggerListener:
                 if not cleaned_line:
                     continue
 
-                print(f"[ADB LISTENER] {cleaned_line}")
+                print(f"[ADB LISTENER] {cleaned_line}", flush=True)
 
                 if "AUDIO_LISTENER_EVENT type=MIC_OPEN" in cleaned_line:
-                    self.on_trigger("AUDIO_LISTENER_EVENT type=MIC_OPEN")
+                    self.on_trigger(cleaned_line)
+
+                elif "AUDIO_LISTENER_EVENT type=MIC_CLOSED" in cleaned_line:
+                    self.on_trigger(cleaned_line)
+
         except Exception as e:
-            print(f"[ERROR] ADB trigger listener: {e}")
+            print(f"[ERROR] ADB trigger listener: {e}", flush=True)
         finally:
             self.running = False
 
